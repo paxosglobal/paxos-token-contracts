@@ -29,7 +29,7 @@ library SafeMath {
     }
 }
 
-// File: contracts/XYZImplementation.sol
+// File: contracts/PaxosToken.sol
 
 pragma solidity ^0.4.24;
 pragma experimental "v0.5.0";
@@ -37,9 +37,9 @@ pragma experimental "v0.5.0";
 
 
 /**
- * @title XYZImplementation
+ * @title PaxosToken
  * @dev this contract is a Pausable ERC20 token with Burn and Mint
- * controlled by a central SupplyController. By implementing XYZImplementation
+ * controlled by a central SupplyController. By implementing PaxosToken
  * this contract also includes external methods for setting
  * a new implementation contract for the Proxy.
  * NOTE: The storage defined here will actually be held in the Proxy
@@ -48,7 +48,7 @@ pragma experimental "v0.5.0";
  * Any call to transfer against this contract should fail
  * with insufficient funds since no tokens will be issued there.
  */
-contract XYZImplementation {
+contract PaxosToken {
 
     /**
      * MATH
@@ -66,8 +66,8 @@ contract XYZImplementation {
     // ERC20 BASIC DATA
     mapping(address => uint256) internal balances;
     uint256 internal totalSupply_;
-    string public constant name = "Hopper"; // solium-disable-line
-    string public constant symbol = "XYZ"; // solium-disable-line uppercase
+    string public constant name = "PaxosToken USD"; // solium-disable-line
+    string public constant symbol = "PaxosToken"; // solium-disable-line uppercase
     uint8 public constant decimals = 6; // solium-disable-line uppercase
 
     // ERC20 DATA
@@ -383,11 +383,11 @@ contract XYZImplementation {
     }
 
     /**
-     * @dev Reclaim all XYZ at the contract address.
-     * This sends the XYZ tokens that this contract add holding to the owner.
+     * @dev Reclaim all tokens at the contract address.
+     * This sends the tokens that this contract add holding to the owner.
      * Note: this is not affected by freeze constraints.
      */
-    function reclaimXYZ() external onlyOwner {
+    function reclaimToken() external onlyOwner {
         uint256 _balance = balances[this];
         balances[this] = 0;
         balances[owner] = balances[owner].add(_balance);
