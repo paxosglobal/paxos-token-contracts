@@ -18,7 +18,7 @@ To guard against centralized control, the addresses above utilize multisignature
 
 ### ABI and Addresses
 
-The contract abi is in `PaxosToken.abi`, which is the imlementation contract abi.
+The contract abi is in `PaxosToken.abi`, which is the implementation contract abi.
 
 Interaction with token is done at the address of the proxy. Deployed token addresses can be found in
 the [Paxos docs](https://docs.paxos.com/stablecoin).
