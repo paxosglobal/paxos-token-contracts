@@ -2,7 +2,7 @@ const { ethers, upgrades } = require("hardhat");
 const { MaxUint256 } = require("hardhat").ethers;
 const { limits } = require('./constants');
 
-const PAXOS_TOKEN_V1 = "PaxosTokenV1"
+const XYZ_V1 = "XYZImplementationV1"
 const PAXOS_TOKEN_V2 = "PaxosTokenV2"
 
 async function InitializePaxosTokenContract(admin, owner, assetProtectionRole, contractName) {
@@ -13,7 +13,7 @@ async function InitializePaxosTokenContract(admin, owner, assetProtectionRole, c
   const proxiedPaxosToken = contract.attach(await proxy.getAddress())
   let supplyControl;
 
-  if (contractName == PAXOS_TOKEN_V1) { //V1 uses old initialization pattern
+  if (contractName == XYZ_V1) { //V1 uses old initialization pattern
     await proxiedPaxosToken.initialize();
     await proxiedPaxosToken.setAssetProtectionRole(assetProtectionRole.address);
   } else {
@@ -57,8 +57,8 @@ async function deployUUPSContractFixture(contractName) {
   return { owner, admin, recipient, acc, acc2, acc3, assetProtectionRole, token, amount, supplyControl };
 }
 
-async function deployPaxosTokenFixtureV1() {
-  return deployContractFixture(PAXOS_TOKEN_V1)
+async function deployXYZFixtureV1() {
+  return deployContractFixture(XYZ_V1)
 }
 
 async function deployPaxosTokenFixtureV2() {
@@ -77,8 +77,8 @@ async function deployStableCoinFixtureUSDP() {
   return deployContractFixture("USDP");
 }
 
-async function deployStableCoinFixtureUSDG() {
-  return deployUUPSContractFixture("USDG");
+async function deployStableCoinFixtureUSDX() {
+  return deployUUPSContractFixture("USDX");
 }
 
 async function deployRateLimitTest() {
@@ -90,11 +90,11 @@ async function deployRateLimitTest() {
 
 module.exports = {
   InitializePaxosTokenContract,
-  deployPaxosTokenFixtureV1,
+  deployXYZFixtureV1,
   deployPaxosTokenFixtureV2,
   deployPaxosTokenFixtureLatest,
   deployStableCoinFixturePYUSD,
   deployStableCoinFixtureUSDP,
-  deployStableCoinFixtureUSDG,
+  deployStableCoinFixtureUSDX,
   deployRateLimitTest
 }

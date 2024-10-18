@@ -125,7 +125,7 @@ module.exports = {
 
 /* Sample Usage
 async function exec() {
-  const oldFullQualifiedName = "contracts/archive/PaxosTokenV1.sol:PaxosTokenV1";
+  const oldFullQualifiedName = "contracts/archive/XYZImplementationV1.sol:XYZImplementationV1";
   const newFullQualifiedName = "contracts/PaxosTokenV2.sol:PaxosTokenV2";
   console.table(await getComparison(oldFullQualifiedName, newFullQualifiedName))
 }

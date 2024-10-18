@@ -5,23 +5,23 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { PaxosTokenV2 } from "./../PaxosTokenV2.sol";
 
 /**
- * @title USDG Smart contract
+ * @title USDX Smart contract
  * @dev This contract is a {PaxosTokenV2-PaxosTokenV2} ERC20 token.
  * @custom:security-contact smart-contract-security@paxos.com
  */
-contract USDG is PaxosTokenV2, UUPSUpgradeable {
+contract USDX is PaxosTokenV2, UUPSUpgradeable {
     /**
      * @dev Returns the name of the token.
      */
     function name() public view virtual override returns (string memory) {
-        return "Global Dollar";
+        return "USD Token";
     }
 
     /**
      * @dev Returns the symbol of the token.
      */
     function symbol() public view virtual override returns (string memory) {
-        return "USDG";
+        return "USDX";
     }
 
     /**
