@@ -1,9 +1,10 @@
 const { ethers } = require("hardhat");
 const { TOKEN_CONTRACT_NAME} = process.env;
 
-const { PrintDeployerDetails, PrintContractDetails } = require('./utils');
+const { PrintDeployerDetails, PrintContractDetails, ValidateEnvironmentVariables } = require('./utils');
 
 async function main() {
+  ValidateEnvironmentVariables([TOKEN_CONTRACT_NAME])
   PrintDeployerDetails();
 
   console.log("\nDeploying Implementation contract...")

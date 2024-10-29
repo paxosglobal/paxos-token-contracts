@@ -1,13 +1,13 @@
-const { deployXYZFixtureV1 } = require('./helpers/fixtures');
-const { abi: xyzAbi }= require("../artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json")
+const { deployPaxosTokenFixtureV1 } = require('./helpers/fixtures');
+const { abi: paxosTokenAbi }= require("../artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json")
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { assert } = require('chai');
 const { isStorageLayoutModified } = require('./helpers/storageLayout');
 const { limits } = require('./helpers/constants');
 const { MaxUint256 } = require("hardhat").ethers;
 
-const XYZ_V1 = "V1"
-const XYZ_V2 = "V2"
+const PAXOS_TOKEN_V1 = "V1"
+const PAXOS_TOKEN_V2 = "V2"
 
 // Testing an the upgrade is focused on testing the consistency of the memory model. The goal of this test is to
 // read every piece of mutable data (constants are not in storage anyway) that exists in the old version
@@ -25,7 +25,7 @@ describe('UpgradeToV2', function () {
     // set all types of data - roles, balances, approvals, freezes
     this.setData = async function (version) {
       // set roles
-      if (version == XYZ_V2) {
+      if (version == PAXOS_TOKEN_V2) {
         await this.supplyControl.addSupplyController(supplyController, MaxUint256, limits.REFILL_PER_SECOND, [supplyController], false, {from: owner})
       } else {
         await this.token.setSupplyController(supplyController);
@@ -33,7 +33,7 @@ describe('UpgradeToV2', function () {
 
       // emulate some purchases and transfers
 
-      if (version == XYZ_V2) {
+      if (version == PAXOS_TOKEN_V2) {
         await this.token.connect(supplyControllerSigner).increaseSupplyToAddress(supply, supplyController);
       } else {
         await this.token.connect(supplyControllerSigner).increaseSupply(supply);
@@ -44,7 +44,7 @@ describe('UpgradeToV2', function () {
   
       // emulate a redemption
       await this.token.connect(purchaserSigner).transfer(supplyController, subAmount);
-      if (version == XYZ_V2) {
+      if (version == PAXOS_TOKEN_V2) {
         await this.token.connect(supplyControllerSigner).decreaseSupplyFromAddress(subAmount, supplyController);
       } else {
         await this.token.connect(supplyControllerSigner).decreaseSupply(subAmount);
@@ -75,12 +75,12 @@ describe('UpgradeToV2', function () {
     // deploy the contracts
     [ownerSigner, adminSigner, supplyControllerSigner, assetProtectionSigner, recipientSigner, purchaserSigner, holderSigner, bystanderSigner, frozenSigner] = await hre.ethers.getSigners();
     [owner, admin, supplyController, assetProtection, recipient, purchaser, holder, bystander, frozen] = [ownerSigner.address, adminSigner.address, supplyControllerSigner.address, assetProtectionSigner.address, recipientSigner.address, purchaserSigner.address, holderSigner.address, bystanderSigner.address, frozenSigner.address]
-    Object.assign(this, await loadFixture(deployXYZFixtureV1));
+    Object.assign(this, await loadFixture(deployPaxosTokenFixtureV1));
 
     supply = BigInt(1000);
     amount = BigInt(100);
     subAmount = BigInt(10);
-    await this.setData(XYZ_V1);
+    await this.setData(PAXOS_TOKEN_V1);
 
     // read the data - note: the data here is always read before the upgrade
 
@@ -108,8 +108,8 @@ describe('UpgradeToV2', function () {
     //Upgrade
     const SanctionListContract = require('./artifacts/IAddressList.json');
 
-    const xyzInterface = new ethers.Interface(xyzAbi)
-    const data = xyzInterface.encodeFunctionData("initialize", [
+    const paxosTokenInterface = new ethers.Interface(paxosTokenAbi)
+    const data = paxosTokenInterface.encodeFunctionData("initialize", [
       60*60*3,
       this.owner,
       this.owner,
@@ -137,8 +137,8 @@ describe('UpgradeToV2', function () {
     //Upgrade
     const SanctionListContract = require('./artifacts/IAddressList.json');
 
-    const xyzInterface = new ethers.Interface(xyzAbi)
-    const data = xyzInterface.encodeFunctionData("initialize", [
+    const paxosTokenInterface = new ethers.Interface(paxosTokenAbi)
+    const data = paxosTokenInterface.encodeFunctionData("initialize", [
       60*60*3,
       this.owner,
       this.owner,
@@ -157,28 +157,28 @@ describe('UpgradeToV2', function () {
   });
 
   it('gives the same result as if we upgraded first', async function () {
-    const xyz = await hre.ethers.deployContract("XYZImplementationV1")
+    const paxosToken = await hre.ethers.deployContract("PaxosTokenV1")
     let ContractFactory = await hre.ethers.getContractFactory("AdminUpgradeabilityProxy");
-    const proxy = await ContractFactory.connect(adminSigner).deploy(await xyz.getAddress())
+    const proxy = await ContractFactory.connect(adminSigner).deploy(await paxosToken.getAddress())
     await proxy.waitForDeployment()
-    const proxiedXYZ = await xyz.attach(await proxy.getAddress())
+    const proxiedPaxosToken = await paxosToken.attach(await proxy.getAddress())
   
-    await proxiedXYZ.initialize();
-    await proxiedXYZ.setAssetProtectionRole(assetProtection);
-    await proxiedXYZ.setSupplyController(supplyController);
+    await proxiedPaxosToken.initialize();
+    await proxiedPaxosToken.setAssetProtectionRole(assetProtection);
+    await proxiedPaxosToken.setSupplyController(supplyController);
 
     // make sure these are new contracts
-    assert.notStrictEqual(await this.token.getAddress(), await proxiedXYZ.getAddress());
+    assert.notStrictEqual(await this.token.getAddress(), await proxiedPaxosToken.getAddress());
     assert.notStrictEqual(await this.proxy.getAddress(), await proxy.getAddress());
-    this.token = proxiedXYZ;
+    this.token = proxiedPaxosToken;
     const paxosTokenV2 = await hre.ethers.deployContract("PaxosTokenV2")
-    const xyzInterface = new ethers.Interface(xyzAbi)
+    const paxosTokenInterface = new ethers.Interface(paxosTokenAbi)
 
     const supplyControlFactory = await ethers.getContractFactory("SupplyControl");
     this.supplyControl = await upgrades.deployProxy(supplyControlFactory, [this.owner, this.owner, await proxy.getAddress(), []], {
       initializer: "initialize",
     });
-    const data = xyzInterface.encodeFunctionData("initialize", [
+    const data = paxosTokenInterface.encodeFunctionData("initialize", [
       60*60*3,
       this.owner,
       this.owner,
@@ -191,14 +191,14 @@ describe('UpgradeToV2', function () {
     const SanctionListContract = require('./artifacts/IAddressList.json');
 
     // set the data on the new contracts after the upgrade this time
-    await this.setData(XYZ_V2);
+    await this.setData(PAXOS_TOKEN_V2);
     // check that the data on the contract is the same as what was read before the upgrade
     await this.checkData();
   });
 
 
   it('has the same storage layout', async function () {
-    const oldFullQualifiedName = "contracts/archive/XYZImplementationV1.sol:XYZImplementationV1";
+    const oldFullQualifiedName = "contracts/archive/PaxosTokenV1.sol:PaxosTokenV1";
     const newFullQualifiedName = "contracts/PaxosTokenV2.sol:PaxosTokenV2";
     assert.isFalse(await isStorageLayoutModified(oldFullQualifiedName, newFullQualifiedName))
   });

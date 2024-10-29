@@ -20,8 +20,18 @@ async function PrintProxyAndImplementation(contract, contractName) {
   console.log("%s contract deploy tx: %s", contractName, contract.deploymentTransaction().hash)
 }
 
+// Throws an error if any of the arguments are falsy or undefined.
+function ValidateEnvironmentVariables(args) {
+  for (const arg of args) {
+    if (!arg) {
+      throw new Error('Missing environment variable');
+    }
+  }
+}
+
 module.exports = {
   PrintDeployerDetails,
   PrintContractDetails,
-  PrintProxyAndImplementation
+  PrintProxyAndImplementation,
+  ValidateEnvironmentVariables,
 }

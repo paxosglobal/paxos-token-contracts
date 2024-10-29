@@ -1,19 +1,20 @@
 const { ethers, upgrades } = require("hardhat");
-const { PrintDeployerDetails, PrintProxyAndImplementation } = require('./utils');
+const { PrintDeployerDetails, PrintProxyAndImplementation, ValidateEnvironmentVariables } = require('./utils');
 
-const { OWNER_ADDRESS, PAUSER_ADDRESS, ASSET_PROTECTOR_ADDRESS } = process.env;
+const { TOKEN_OWNER_ADDRESS, PAUSER_ADDRESS, ASSET_PROTECTOR_ADDRESS } = process.env;
 
-const INITIAL_DELAY = 10;
-const CONTRACT_NAME = "USDX";
+const INITIAL_DELAY = 10800;
+const CONTRACT_NAME = "USDG";
 
 const initializerArgs = [
   INITIAL_DELAY,
-  OWNER_ADDRESS,
+  TOKEN_OWNER_ADDRESS,
   PAUSER_ADDRESS,
   ASSET_PROTECTOR_ADDRESS,
 ];
 
 async function main() {
+  ValidateEnvironmentVariables(initializerArgs)
   await PrintDeployerDetails();
 
   console.log("\nDeploying the contract...")
