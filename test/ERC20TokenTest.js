@@ -92,17 +92,8 @@ describe('ERC20 PaxosToken', function () {
         spender = ZeroAddress;
       });
 
-      it('approves the requested amount', async function () {
-        await this.token.approve(spender, amount);
-
-        const allowance = await this.token.allowance(this.owner.address, spender);
-        assert.equal(allowance, amount);
-      });
-
-      it('emits an approval event', async function () {
-        await expect(this.token.approve(spender, amount))
-        .to.emit(this.token, "Approval")
-        .withArgs(this.owner.address, spender, amount);
+      it('reverts when spender is the zero address', async function () {
+        await expect(this.token.approve(spender, amount)).to.be.revertedWithCustomError(this.token, "ZeroAddress");
       });
     });
   });
