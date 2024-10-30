@@ -438,15 +438,16 @@ contract SupplyControl is AccessControlDefaultAdminRulesUpgradeable, UUPSUpgrade
 
     /**
      * @dev Helper function for removing all addresses from `mintAddressWhitelist`
+     * Removes elements in reverse order to reduce array reordering and improve gas efficiency
      * @param addressSet Set of addresses
      */
     function _removeAddressSet(EnumerableSet.AddressSet storage addressSet) private {
         uint256 length = EnumerableSet.length(addressSet);
-        for (uint256 i = 0; i < length; ) {
-            EnumerableSet.remove(addressSet, EnumerableSet.at(addressSet, i));
+        for (uint256 i = length; i > 0; ) {
             unchecked {
-                i++;
+                i--;
             }
+            EnumerableSet.remove(addressSet, EnumerableSet.at(addressSet, i));
         }
     }
 }

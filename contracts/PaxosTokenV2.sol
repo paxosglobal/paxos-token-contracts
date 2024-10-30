@@ -195,7 +195,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @param value The amount of tokens to be spent
      * @return True if successful
      */
-    function approve(address spender, uint256 value) public whenNotPaused returns (bool) {
+    function approve(address spender, uint256 value) public whenNotPaused isNonZeroAddress(spender) returns (bool) {
         if (_isAddrFrozen(spender) || _isAddrFrozen(msg.sender)) revert AddressFrozen();
         _approve(msg.sender, spender, value);
         return true;
