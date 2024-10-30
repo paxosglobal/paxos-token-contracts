@@ -4,27 +4,24 @@ Paxos-issued USD-collateralized ERC20 stablecoin public smart contract repositor
 
 https://github.com/paxosglobal/paxos-token-contract
 
-### Roles and Addresses
+### Roles
 
-| Role                           | Address                                    |
-| ------------------------------ | ------------------------------------------ |
-| DEFAULT_ADMIN_ROLE             | TBD                                        |
-| PAUSE_ROLE                     | TBD                                        |
-| ASSET_PROTECTION_ROLE          | TBD                                        |
-| SUPPLY_CONTROLLER_MANAGER_ROLE | TBD                                        |
-| SUPPLY_CONTROLLER_ROLE         | TBD                                        |
+| Role                           |
+| ------------------------------ |
+| DEFAULT_ADMIN_ROLE             |
+| PAUSE_ROLE                     |
+| ASSET_PROTECTION_ROLE          |
+| SUPPLY_CONTROLLER_MANAGER_ROLE |
+| SUPPLY_CONTROLLER_ROLE         |
 
 To guard against centralized control, the addresses above utilize multisignature contracts ([source](https://github.com/paxosglobal/simple-multisig)). Any change requires the presence of a quorum of signers in the same physical location, ensuring that no individual signer can unilaterally influence a change.
 
-### ABI, Address, and Verification
+### ABI and Addresses
 
-The contract abi is in `PaxosToken.abi`, which is the imlementation contract abi.
+The contract abi is in `PaxosToken.abi`, which is the implementation contract abi.
 
-Interaction with token is done at the address of the proxy. Below is the table which list out all our contract addresses.
-
-| Token         | Proxy-address           | Implementation-Address  |
-| :-------------: |:-------------:| :-----:|
-| USDP          | 0x000000000000000000000000000000000000000 | 0x000000000000000000000000000000000000000 |
+Interaction with token is done at the address of the proxy. Deployed token addresses can be found in
+the [Paxos docs](https://docs.paxos.com/stablecoin).
 
 ## Contract Specification
 
@@ -91,10 +88,6 @@ While paused, the supply controller retains the ability to mint and burn tokens.
 
 ### Asset Protection Role
 
-Paxos Trust Company is regulated by the New York Department of Financial Services (NYDFS). As required by the regulator,
-Paxos must have a role for asset protection to freeze or seize the assets of a criminal party when required to do so by
-law, including by court order or other legal process.
-
 The `ASSET_PROTECTION_ROLE` can freeze and unfreeze the token balance of any address on chain.
 It can also wipe the balance of an address after it is frozen
 to allow the appropriate authorities to seize the backing assets.
@@ -105,7 +98,7 @@ via `isFrozen(address who)`.
 
 ### Delegate Transfer 
 
-To facilitate gas-less transactions, we have implemented [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009) and (EIP-2612)[https://eips.ethereum.org/EIPS/eip-2612].
+To facilitate gas-less transactions, we have implemented [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009) and [EIP-2612](https://eips.ethereum.org/EIPS/eip-2612).
 
 #### EIP-3009
 The public functions, `transferWithAuthorization` and `transferWithAuthorizationBatch` (for multiple transfers request), allows a spender(delegate) to transfer tokens on behalf of the sender, with condition that a signature, conforming to [EIP-712](https://eips.ethereum.org/EIPS/eip-712), is provided by the respective sender.
@@ -175,7 +168,16 @@ _in the context of the proxy storage_. This way the implementation pointer can
 be changed to a different implementation contract while still keeping the same
 data and contract address, which are really for the proxy contract.
 
-The proxy used here is AdminUpgradeabilityProxy from ZeppelinOS.
+USDP and PYUSD use `AdminUpgradeabilityProxy` from OpenZeppelin.
+
+USDG and SupplyControl use `UUPSUpgradeable` from OpenZeppelin. 
+
+`UUPSUpgradeable` is a newer proxy pattern which
+has some advantages over `AdminUpgradeabilityProxy`. One issue with `AdminUpgradeabilityProxy` is the proxy admin
+cannot call any of the implementation functions which means the proxy admin must be a separate address
+from the DEFAULT_ADMIN_ROLE. This is not an issue with `UUPSUpgradeable`. Another advantage is updating
+the proxy admin in `UUPSUpgradeable` is a two step process due to using OpenZeppelin's AccessControlDefaultAdmin. 
+However, in `AdminUpgradeabilityProxy` it's one step which is more dangerous.
 
 ## Upgrade Process
 
@@ -185,19 +187,6 @@ where the latter is used for upgrades requiring a new initialization or data mig
 it can all be done in one transaction. You must first deploy a copy of the new implementation
 contract, which is automatically paused by its constructor to help avoid accidental calls directly
 to the proxy contract.
-
-## Bytecode verification
-[comment]: <> (TODO: ref: `@` -> Add implementation address for line 142)
-
-The proxy contract and implementation contracts are verified on etherscan at the following links:
-https://etherscan.io/token/0x6c3ea9036406852006290770bedfcaba0e23a0e8
-https://etherscan.io/token/`@`
-
-Because the implementation address in the proxy is a private variable,
-verifying that this is the proxy being used requires reading contract
-storage directly. The contract storage slot address is `0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3`.
-
-`npx hardhat --network ${NETWORK} run scripts/getImplementationAddress.js`
 
 ## Contract Tests
 Install dependencies:

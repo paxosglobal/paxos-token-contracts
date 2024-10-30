@@ -487,15 +487,15 @@ abstract contract EIP3009 is PaxosBaseAbstract, EIP712Domain {
     }
 }
 
-// File: contracts/XYZImplementation.sol
+// File: contracts/PaxosToken.sol
 
 pragma solidity ^0.8.17;
 
 
 /**
- * @title XYZImplementation
+ * @title PaxosToken
  * @dev this contract is a Pausable ERC20 token with Burn and Mint
- * controlled by a central SupplyController. By implementing XYZImplementation
+ * controlled by a central SupplyController. By implementing PaxosToken
  * this contract also includes external methods for setting
  * a new implementation contract for the Proxy.
  * NOTE: The storage defined here will actually be held in the Proxy
@@ -504,7 +504,7 @@ pragma solidity ^0.8.17;
  * Any call to transfer against this contract should fail
  * with insufficient funds since no tokens will be issued there.
  */
-contract XYZImplementation is PaxosBaseAbstract{
+contract PaxosToken is PaxosBaseAbstract{
 
     /**
      * DATA
@@ -516,8 +516,8 @@ contract XYZImplementation is PaxosBaseAbstract{
     // ERC20 BASIC DATA
     mapping(address => uint256) internal balances;
     uint256 internal totalSupply_;
-    string public constant name = "XYZ USD"; // solhint-disable-line const-name-snakecase
-    string public constant symbol = "XYZ"; // solhint-disable-line const-name-snakecase
+    string public constant name = "PaxosToken USD"; // solhint-disable-line const-name-snakecase
+    string public constant symbol = "PaxosToken"; // solhint-disable-line const-name-snakecase
     uint8 public constant decimals = 6; // solhint-disable-line const-name-snakecase
 
     // ERC20 DATA
@@ -556,7 +556,7 @@ contract XYZImplementation is PaxosBaseAbstract{
     // solhint-disable-next-line var-name-mixedcase
     bytes32 public EIP712_DOMAIN_HASH_DEPRECATED;
     // Storage gap: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#storage-gaps
-    uint256[25] __gap_XYZImplementation;
+    uint256[25] __gap_PaxosToken;
 
     /**
      * EVENTS
@@ -828,11 +828,11 @@ contract XYZImplementation is PaxosBaseAbstract{
     }
 
     /**
-     * @dev Reclaim all XYZ at the contract address.
-     * This sends the XYZ tokens that this contract add holding to the owner.
+     * @dev Reclaim all tokens at the contract address.
+     * This sends the tokens that this contract add holding to the owner.
      * Note: this is not affected by freeze constraints.
      */
-    function reclaimXYZ() external onlyOwner {
+    function reclaimToken() external onlyOwner {
         uint256 _balance = balances[address(this)];
         balances[address(this)] = 0;
         balances[owner] += _balance;
@@ -1046,7 +1046,7 @@ contract XYZImplementation is PaxosBaseAbstract{
 
 }
 
-// File: contracts/XYZImplementationV1.sol
+// File: contracts/PaxosTokenV1.sol
 
 pragma solidity ^0.8.17;
 
@@ -1055,9 +1055,9 @@ pragma solidity ^0.8.17;
 
 
 /**
- * @title XYZImplementationV1
+ * @title PaxosTokenV1
  * @dev this contract is a Pausable ERC20 token with Burn and Mint
- * controlled by a central SupplyController. By implementing XYZImplementationV1
+ * controlled by a central SupplyController. By implementing PaxosTokenV1
  * this contract also includes external methods for setting
  * a new implementation contract for the Proxy.
  * NOTE: The storage defined here will actually be held in the Proxy
@@ -1066,7 +1066,7 @@ pragma solidity ^0.8.17;
  * Any call to transfer against this contract should fail
  * with insufficient funds since no tokens will be issued there.
  */
-contract XYZImplementationV1 is XYZImplementation, EIP2612, EIP3009 {
+contract PaxosTokenV1 is PaxosToken, EIP2612, EIP3009 {
     constructor() {
         initializeEIP712DomainSeparator();
     }
@@ -1075,6 +1075,6 @@ contract XYZImplementationV1 is XYZImplementation, EIP2612, EIP3009 {
      * @dev To be called when upgrading the contract using upgradeAndCall and during initialization of contract.
      */
     function initializeEIP712DomainSeparator() public {
-        DOMAIN_SEPARATOR = EIP712.makeDomainSeparator("XYZ", "1");
+        DOMAIN_SEPARATOR = EIP712.makeDomainSeparator("PaxosToken", "1");
     }
 }
