@@ -17,8 +17,7 @@ https://github.com/paxosglobal/paxos-token-contract
 To guard against centralized control, the addresses above utilize multisignature contracts ([source](https://github.com/paxosglobal/simple-multisig)). Any change requires the presence of a quorum of signers in the same physical location, ensuring that no individual signer can unilaterally influence a change.
 
 ### ABI and Addresses
-
-The contract abi is in `PaxosToken.abi`, which is the implementation contract abi.
+Contract ABIs can be found in the `abis` folder.
 
 Interaction with token is done at the address of the proxy. Deployed token addresses can be found in
 the [Paxos docs](https://docs.paxos.com/stablecoin).

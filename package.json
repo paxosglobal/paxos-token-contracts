@@ -1,14 +1,13 @@
 {
   "name": "PaxosToken",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "description": "Paxos issued USD-collateralized ERC20 stablecoin",
-  "main": "index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "generate-abi": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -c .abi > PaxosToken.abi",
-    "generate-bin": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -r .bytecode > PaxosToken.bin",
+    "generate-abi": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -c .abi > PaxosTokenV2.abi",
+    "generate-bin": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -r .bytecode > PaxosTokenV2.bin",
     "compile": "npx hardhat compile --force",
     "coverage": "npx hardhat coverage",
     "flatten-impl": "npx hardhat flatten contracts/PaxosTokenV2.sol",
@@ -19,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/paxosglobal/pax-contracts.git"
+    "url": "git+https://github.com/paxosglobal/paxos-token-contracts.git"
   },
   "author": "PAXOS",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/paxosglobal/pax-contracts/issues"
+    "url": "https://github.com/paxosglobal/paxos-token-contracts/issues"
   },
-  "homepage": "https://github.com/paxosglobal/pax-contracts#readme",
+  "homepage": "https://paxos.com/",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
     "@nomicfoundation/hardhat-ethers": "^3.0.4",
