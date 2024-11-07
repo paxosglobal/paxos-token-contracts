@@ -371,6 +371,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @return success A boolean that indicates if the operation was successful
      */
     function decreaseSupplyFromAddress(uint256 value, address burnFromAddress) public virtual returns (bool success) {
+        require(!_isAddrFrozen(burnFromAddress), "burnFromAddress frozen");
         supplyControl.canBurnFromAddress(burnFromAddress, msg.sender);
         if (value > balances[burnFromAddress]) revert InsufficientFunds();
 

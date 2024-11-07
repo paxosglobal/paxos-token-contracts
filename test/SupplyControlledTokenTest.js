@@ -271,6 +271,11 @@ describe('PaxosToken', function () {
           assert.equal(balance, finalAmount, 'supply controller balance matches');
         });
 
+        it('reverts if burnAddress is frozen', async function () {
+          await this.token.connect(this.assetProtectionRole).freeze(this.acc.address)
+          await expect(this.token.decreaseSupplyFromAddress(decreaseAmount, this.acc.address)).to.be.revertedWith("burnFromAddress frozen");
+        });
+
         it('emits a SupplyDecreased and a Transfer event', async function () {
           await expect(this.token.decreaseSupplyFromAddress(decreaseAmount, this.owner.address))
           .to.emit(this.token, "SupplyDecreased")
