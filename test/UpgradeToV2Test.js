@@ -67,9 +67,9 @@ describe('UpgradeToV2', function () {
       assert.deepStrictEqual(this.bystanderApproval, await this.token.allowance(holder, bystander));
       assert.deepStrictEqual(this.frozenApproval, await this.token.allowance(holder, frozen)); // 0
       assert.strictEqual(this.bystanderFrozen, await this.token.isFrozen(bystander));
-      // assert.strictEqual(this.frozenFrozen, await this.token.isFrozen(frozen)); //This is actually different behavior
       assert.deepStrictEqual(this.totalSupply, await this.token.totalSupply());
       assert.strictEqual(this.paused, await this.token.paused());
+      assert.notStrictEqual(this.domainSeparator, await this.token.DOMAIN_SEPARATOR()); // Domain separator should be updated
     };
 
     // deploy the contracts
@@ -100,6 +100,7 @@ describe('UpgradeToV2', function () {
     this.frozenFrozen = await this.token.isFrozen(frozen);
     this.totalSupply = await this.token.totalSupply();
     this.paused = await this.token.paused();
+    this.domainSeparator = await this.token.DOMAIN_SEPARATOR(); // Store initial domain separator
   });
 
   it('can survive and integration test when not paused', async function () {

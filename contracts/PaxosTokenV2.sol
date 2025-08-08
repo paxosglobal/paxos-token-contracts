@@ -122,6 +122,14 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
     }
 
     /**
+     * @notice Initialize the domain separator for the contract.
+     * @dev This is public to allow for updates to the domain separator if the name is updated.
+     */
+    function initializeDomainSeparator() public {
+        _initializeDomainSeparator();
+    }
+
+    /**
      * @notice Returns the total supply of the token.
      * @return An uint256 representing the total supply of the token.
      */
@@ -484,7 +492,6 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
         if (pastVersion < 1 && !initializedV1) {
             //Need this second condition since V1 could have used old upgrade pattern
             totalSupply_ = 0;
-            DOMAIN_SEPARATOR = EIP712._makeDomainSeparator(name(), "1");
             initializedV1 = true;
         }
     }
@@ -505,6 +512,14 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
         __AccessControlDefaultAdminRules_init(initialDelay, initialOwner);
         _grantRole(PAUSE_ROLE, pauser);
         _grantRole(ASSET_PROTECTION_ROLE, assetProtector);
+        _initializeDomainSeparator();
+    }
+
+    /**
+     * @dev Private function to initialize the domain separator for the contract.
+     */
+    function _initializeDomainSeparator() private {
+        DOMAIN_SEPARATOR = EIP712._makeDomainSeparator(name(), "1");
     }
 
     /**
