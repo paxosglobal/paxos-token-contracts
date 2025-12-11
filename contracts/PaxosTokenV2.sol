@@ -122,14 +122,6 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
     }
 
     /**
-     * @notice Initialize the domain separator for the contract.
-     * @dev This is public to allow for updates to the domain separator if the name is updated.
-     */
-    function initializeDomainSeparator() public {
-        _initializeDomainSeparator();
-    }
-
-    /**
      * @notice Returns the total supply of the token.
      * @return An uint256 representing the total supply of the token.
      */
@@ -512,14 +504,6 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
         __AccessControlDefaultAdminRules_init(initialDelay, initialOwner);
         _grantRole(PAUSE_ROLE, pauser);
         _grantRole(ASSET_PROTECTION_ROLE, assetProtector);
-        _initializeDomainSeparator();
-    }
-
-    /**
-     * @dev Private function to initialize the domain separator for the contract.
-     */
-    function _initializeDomainSeparator() private {
-        DOMAIN_SEPARATOR = EIP712._makeDomainSeparator(name(), "1");
     }
 
     /**
@@ -538,5 +522,14 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
     function _unfreeze(address addr) private {
         delete frozen[addr];
         emit UnfreezeAddress(addr);
+    }
+
+    /**
+     * @notice EIP712 Domain Separator
+     * @dev Returns domain separator, always recomputed to handle chain forks
+     * @return The domain separator for EIP-712 signatures
+     */
+    function DOMAIN_SEPARATOR() public view override returns (bytes32) {
+        return EIP712._makeDomainSeparator(name(), "1");
     }
 }

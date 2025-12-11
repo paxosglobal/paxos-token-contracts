@@ -221,7 +221,7 @@ describe("EIP3009", function () {
     it("reverts transferWithAuthorizationBatch when contract is paused", async function() {
       let [vs, rs, ss, tos, transactionValues, froms, validAfters, validBefores, nonces] = transferWithAuthorizationBatchSetup(sender, recipient, transactionValue, domainSeparator);
 
-      this.token.pause();
+      await this.token.pause();
 
       // Execute the transaction
        await expect(this.token.connect(this.spender).transferWithAuthorizationBatch(
@@ -356,7 +356,7 @@ describe("EIP3009", function () {
       await this.token.transfer(sender.address, senderBalance);
 
       // Valid transfer
-      this.token.connect(this.spender).transferWithAuthorization(
+      await this.token.connect(this.spender).transferWithAuthorization(
         sender.address,
         recipient.address,
         transactionValue,
@@ -399,7 +399,7 @@ describe("EIP3009", function () {
       await this.token.transfer(ACCOUNTS[3].address, senderBalance);
 
       // Valid transfer
-      this.token.connect(this.spender).transferWithAuthorization(
+      await this.token.connect(this.spender).transferWithAuthorization(
         sender.address,
         recipient.address,
         transactionValue,
@@ -518,7 +518,7 @@ describe("EIP3009", function () {
       )).to.be.revertedWithCustomError(this.token, "InvalidSignature");
     });
 
-    it("executes a transferWithAuthorization with a valid authorization", async function() {
+    it("reverts a transferWithAuthorization when contract is paused", async function() {
       const from = sender.address;
       const to = recipient.address;
       const validAfter = 0;
@@ -549,6 +549,205 @@ describe("EIP3009", function () {
         r,
         s,
       )).to.be.revertedWithCustomError(this.token, "ContractPaused");
+    });
+
+    it("executes a transferWithAuthorization with bytes signature", async function() {
+      const from = sender.address;
+      const to = recipient.address;
+      const validAfter = 0;
+      const validBefore = MAX_UINT256;
+
+      // Sender signs the authorization
+      const { v, r, s } = signTransferAuthorization(
+        from,
+        to,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        sender.key
+      );
+
+      // Fund sender from owner
+      await this.token.transfer(sender.address, senderBalance);
+
+      // check initial balance
+      expect(BigInt(await this.token.balanceOf(from))).to.equal(senderBalance);
+      expect(BigInt(await this.token.balanceOf(to))).to.equal(0);
+      expect(await this.token.authorizationState(from, nonce)).to.be.false;
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r, s, v]);
+
+      // Execute the transaction with bytes signature
+      const result = await this.token.connect(this.spender)['transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)'](
+        from,
+        to,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        signature
+      );
+      var transactionRecp = await result.wait()
+      assert.equal(transactionRecp.status, 1, 'transferWithAuthorization transaction failed');
+
+      // check that balance is updated
+      expect(BigInt(await this.token.balanceOf(from))).to.equal(senderBalance - transactionValue);
+      expect(BigInt(await this.token.balanceOf(to))).to.equal(transactionValue);
+
+      // check that AuthorizationUsed event is emitted
+      await expect(result)
+      .to.emit(this.token, "AuthorizationUsed")
+      .withArgs(from, nonce)
+      .and.to.emit(this.token, "Transfer")
+      .withArgs(from, to, transactionValue)
+
+      // check that the authorization is now used
+      expect(await this.token.authorizationState(from, nonce)).to.be.true;
+    });
+
+    it("reverts bytes signature transferWithAuthorization when signature is invalid", async function() {
+      const from = sender.address;
+      const to = recipient.address;
+      const validAfter = 0;
+      const validBefore = MAX_UINT256;
+
+      // Wrong signer creates the authorization
+      const { v, r, s } = signTransferAuthorization(
+        from,
+        to,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        recipient.key // wrong key
+      );
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r, s, v]);
+
+      // Execute the transaction with bytes signature
+      await expect(this.token.connect(this.spender)['transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)'](
+        from,
+        to,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        signature
+      )).to.be.revertedWithCustomError(this.token, "InvalidSignature");
+    });
+
+    it("executes transferWithAuthorizationBatch with bytes signatures", async function() {
+      // Create custom batch with different recipients
+      const batches = 2;
+      const froms = [ACCOUNTS[2].address, ACCOUNTS[3].address];
+      const tos = [ACCOUNTS[6].address, ACCOUNTS[7].address]; // Different recipients
+      const transactionValues = [transactionValue, transactionValue];
+      const validAfters = [0, 0];
+      const validBefores = [MAX_UINT256, MAX_UINT256];
+      const nonces = [ethers.hexlify(ethers.randomBytes(32)), ethers.hexlify(ethers.randomBytes(32))];
+      
+      // Fund the sender accounts
+      for (let i = 0; i < batches; i++) {
+        await this.token.transfer(froms[i], senderBalance);
+      }
+
+      // Create signatures for each batch
+      const signatures = [];
+      for (let i = 0; i < batches; i++) {
+        const { v, r, s } = signTransferAuthorization(
+          froms[i],
+          tos[i],
+          transactionValues[i],
+          validAfters[i],
+          validBefores[i],
+          nonces[i],
+          domainSeparator,
+          ACCOUNTS[i + 2].key
+        );
+        signatures.push(ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r, s, v]));
+      }
+
+      const result = await this.token.connect(this.spender)['transferWithAuthorizationBatch(address[],address[],uint256[],uint256[],uint256[],bytes32[],bytes[])'](
+        froms, 
+        tos, 
+        transactionValues, 
+        validAfters, 
+        validBefores, 
+        nonces, 
+        signatures
+      );
+
+      const transactionRecp = await result.wait();
+      assert.equal(transactionRecp.status, 1, 'transferWithAuthorizationBatch with bytes signatures transaction failed');
+
+      // Check balances - each sender should have sent their transaction value
+      for (let i = 0; i < batches; i++) {
+        expect(await this.token.balanceOf(froms[i])).to.equal(senderBalance - transactionValue);
+        expect(await this.token.balanceOf(tos[i])).to.equal(transactionValue);
+        expect(await this.token.authorizationState(froms[i], nonces[i])).to.equal(true);
+      }
+    });
+
+    it("reverts bytes signature transferWithAuthorizationBatch when signature arrays have different lengths", async function() {
+      const batches = 2;
+      let [vs, rs, ss, tos, transactionValues, froms, validAfters, validBefores, nonces] = transferWithAuthorizationBatchSetup(sender, recipient, transactionValue, domainSeparator, batches);
+
+      // Create signatures array with wrong length (missing one signature)
+      const signatures = [ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [rs[0], ss[0], vs[0]])];
+
+      await expect(
+        this.token.connect(this.spender)['transferWithAuthorizationBatch(address[],address[],uint256[],uint256[],uint256[],bytes32[],bytes[])'](
+          froms, 
+          tos, 
+          transactionValues, 
+          validAfters, 
+          validBefores, 
+          nonces, 
+          signatures // Only one signature for two batches
+        )
+      ).to.be.revertedWithCustomError(this.token, "ArgumentLengthMismatch");
+    });
+
+    it("reverts bytes signature transferWithAuthorizationBatch when one signature is invalid", async function() {
+      const batches = 2;
+      let [vs, rs, ss, tos, transactionValues, froms, validAfters, validBefores, nonces] = transferWithAuthorizationBatchSetup(sender, ACCOUNTS[1], transactionValue, domainSeparator, batches);
+      
+      // Fund the sender accounts that were set up by the batch setup function
+      for (let i = 0; i < batches; i++) {
+        await this.token.transfer(froms[i], senderBalance);
+      }
+      
+      // Create invalid signature for the second batch (wrong signer)
+      const { v: v2, r: r2, s: s2 } = signTransferAuthorization(
+        froms[1],
+        tos[1],
+        transactionValue,
+        validAfters[1],
+        validBefores[1],
+        nonces[1],
+        domainSeparator,
+        ACCOUNTS[8].key // Wrong signer!
+      );
+
+      const signatures = [
+        ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [rs[0], ss[0], vs[0]]),
+        ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r2, s2, v2])
+      ];
+
+      await expect(
+        this.token.connect(this.spender)['transferWithAuthorizationBatch(address[],address[],uint256[],uint256[],uint256[],bytes32[],bytes[])'](
+          froms, 
+          tos, 
+          transactionValues, 
+          validAfters, 
+          validBefores, 
+          nonces, 
+          signatures
+        )
+      ).to.be.revertedWithCustomError(this.token, "InvalidSignature");
     });
 
 
@@ -674,6 +873,92 @@ describe("EIP3009", function () {
       )).to.be.revertedWithCustomError(this.token, "ContractPaused");
     });
 
+    it("executes a receiveWithAuthorization with bytes signature", async function() {
+      const from = sender.address;
+      const validAfter = 0;
+      const validBefore = MAX_UINT256;
+
+      // Sender signs the authorization
+      const { v, r, s } = signReceiveAuthorization(
+        from,
+        receiver,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        sender.key
+      );
+
+      // Fund sender from owner
+      await this.token.transfer(from, senderBalance);
+
+      // check initial balance
+      expect(BigInt(await this.token.balanceOf(from))).to.equal(senderBalance);
+      expect(BigInt(await this.token.balanceOf(receiver))).to.equal(0);
+      expect(await this.token.authorizationState(from, nonce)).to.be.false;
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r, s, v]);
+
+      // Execute the transaction with bytes signature
+      const result = await this.token.connect(this.receiverSigner)['receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)'](
+        from,
+        receiver,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        signature
+      );
+      var transactionRecp = await result.wait()
+      assert.equal(transactionRecp.status, 1, 'receiveWithAuthorization transaction failed');
+
+      // check that balance is updated
+      expect(BigInt(await this.token.balanceOf(from))).to.equal(senderBalance - transactionValue);
+      expect(BigInt(await this.token.balanceOf(receiver))).to.equal(transactionValue);
+
+      // check that AuthorizationUsed event is emitted
+      await expect(result)
+      .to.emit(this.token, "AuthorizationUsed")
+      .withArgs(from, nonce)
+      .and.to.emit(this.token, "Transfer")
+      .withArgs(from, receiver, transactionValue)
+
+      // check that the authorization is now used
+      expect(await this.token.authorizationState(from, nonce)).to.be.true;
+    });
+
+    it("reverts bytes signature receiveWithAuthorization when signature is invalid", async function() {
+      const from = sender.address;
+      const validAfter = 0;
+      const validBefore = MAX_UINT256;
+
+      // Wrong signer creates the authorization
+      const { v, r, s } = signReceiveAuthorization(
+        from,
+        receiver,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        recipient.key // wrong key
+      );
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [r, s, v]);
+
+      // Execute the transaction with bytes signature
+      await expect(this.token.connect(this.receiverSigner)['receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)'](
+        from,
+        receiver,
+        transactionValue,
+        validAfter,
+        validBefore,
+        nonce,
+        signature
+      )).to.be.revertedWithCustomError(this.token, "InvalidSignature");
+    });
+
   });
 
   describe("cancelAuthorization", function() {
@@ -788,7 +1073,7 @@ describe("EIP3009", function () {
         domainSeparator,
         sender.key
       );
-      this.token.pause();
+      await this.token.pause();
 
       // cancel the authorization
       await expect(this.token.connect(this.spender).cancelAuthorization(
@@ -850,6 +1135,62 @@ describe("EIP3009", function () {
         cancellation.v,
         cancellation.r,
         cancellation.s,
+      )).to.be.revertedWithCustomError(this.token, "InvalidSignature");
+    });
+
+    it("executes cancelAuthorization with bytes signature", async function() {
+      const from = sender.address;
+
+      // check that the authorization is unused
+      expect(await this.token.authorizationState(from, nonce)).to.be.false;
+
+      // create cancellation
+      const cancellation = signCancelAuthorization(
+        from,
+        nonce,
+        domainSeparator,
+        sender.key
+      );
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [cancellation.r, cancellation.s, cancellation.v]);
+
+      // cancel the authorization with bytes signature
+      const result = await this.token.connect(this.spender)['cancelAuthorization(address,bytes32,bytes)'](
+        from,
+        nonce,
+        signature
+      );
+
+      // check that AuthorizationCanceled event is emitted
+      await expect(result)
+      .to.emit(this.token, "AuthorizationCanceled")
+      .withArgs(from, nonce);
+
+      // check that the authorization is now used
+      expect(await this.token.authorizationState(from, nonce)).to.be.true;
+    });
+
+    it("reverts bytes signature cancelAuthorization when signature is invalid", async function() {
+      const from = sender.address;
+
+      // check that the authorization is unused
+      expect(await this.token.authorizationState(from, nonce)).to.be.false;
+
+      // create cancellation with wrong signer
+      const cancellation = signCancelAuthorization(
+        from,
+        nonce,
+        domainSeparator,
+        recipient.key // wrong key
+      );
+
+      const signature = ethers.solidityPacked(["bytes32", "bytes32", "uint8"], [cancellation.r, cancellation.s, cancellation.v]);
+
+      // cancel the authorization with bytes signature
+      await expect(this.token.connect(this.spender)['cancelAuthorization(address,bytes32,bytes)'](
+        from,
+        nonce,
+        signature
       )).to.be.revertedWithCustomError(this.token, "InvalidSignature");
     });
 
