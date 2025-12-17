@@ -328,7 +328,7 @@ abstract contract EIP3009 is PaxosBaseAbstract, EIP712Domain, EIP3009Definitions
         }
 
         bytes32 digest = keccak256(abi.encodePacked(
-            hex"1901",
+            EIP712_VERSION_PREFIX,
             DOMAIN_SEPARATOR(),
             keccak256(abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, authorizer, nonce))
         ));
@@ -370,7 +370,7 @@ abstract contract EIP3009 is PaxosBaseAbstract, EIP712Domain, EIP3009Definitions
         }
 
         bytes32 digest = keccak256(abi.encodePacked(
-            hex"1901",
+            EIP712_VERSION_PREFIX,
             DOMAIN_SEPARATOR(),
             keccak256(abi.encode(typeHash, from, to, value, validAfter, validBefore, nonce))
         ));

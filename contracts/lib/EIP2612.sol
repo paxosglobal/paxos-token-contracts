@@ -85,7 +85,7 @@ abstract contract EIP2612 is PaxosBaseAbstract, EIP712Domain, EIP2612Definitions
         if (_isAddrFrozen(spender) || _isAddrFrozen(owner)) revert AddressFrozen();
 
         bytes32 digest = keccak256(abi.encodePacked(
-            hex"1901",
+            EIP712_VERSION_PREFIX,
             DOMAIN_SEPARATOR(),
             keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, _nonces[owner]++, deadline))
         ));
