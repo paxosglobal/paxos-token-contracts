@@ -13,9 +13,6 @@ describe("PaxosTokenV2 EIP712", function () {
             await token.waitForDeployment();
             const tokenAddress = await token.getAddress();
 
-            // Call initializeDomainSeparator
-            await token.initializeDomainSeparator();
-
             // Get the domain separator
             const domainSeparator = await token.DOMAIN_SEPARATOR();
 
@@ -29,7 +26,7 @@ describe("PaxosTokenV2 EIP712", function () {
 
             // Create the domain separator hash using ethers.js v6
             const domainSeparatorHash = ethers.TypedDataEncoder.hashDomain(domain);
-            
+
             // Verify the domain separator matches
             expect(domainSeparator).to.equal(domainSeparatorHash);
         });
