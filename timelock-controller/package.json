@@ -1,0 +1,30 @@
+{
+  "name": "timelock-controller",
+  "version": "1.0.0",
+  "description": "TimelockController deployment",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile --config ./hardhat.config.js",
+    "deploy": "hardhat run scripts/deploy.js --config ./hardhat.config.js",
+    "deploy:eth-mainnet": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network ethMain",
+    "deploy:eth-sepolia": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network ethSepolia",
+    "deploy:ink-mainnet": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network inkMain",
+    "deploy:ink-sepolia": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network inkSepolia",
+    "deploy:arb-mainnet": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network arbMain",
+    "deploy:arb-sepolia": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network arbSepolia",
+    "deploy:xlayer-mainnet": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network xlayer",
+    "deploy:xlayer-testnet": "hardhat run scripts/deploy.js --config ./hardhat.config.js --network xlayerTestnet"
+  },
+  "keywords": [],
+  "author": "PAXOS",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@okxweb3/hardhat-explorer-verify": "^1.6.5",
+    "@openzeppelin/contracts": "5.5.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.0",
+    "hardhat": "^2.19.5"
+  }
+}

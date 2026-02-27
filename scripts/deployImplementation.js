@@ -1,17 +1,21 @@
 const { ethers } = require("hardhat");
-const { TOKEN_CONTRACT_NAME} = process.env;
+const { PrintDeployerDetails, PrintContractDetails, ReadConfig, WriteConfig, ValidateEnvironmentVariables } = require('./utils');
 
-const { PrintDeployerDetails, PrintContractDetails, ValidateEnvironmentVariables } = require('./utils');
+const { CONFIG_PATH, CONTRACT_NAME } = process.env;
+const config = ReadConfig(CONFIG_PATH);
 
 async function main() {
-  ValidateEnvironmentVariables([TOKEN_CONTRACT_NAME])
+  ValidateEnvironmentVariables([CONFIG_PATH, CONTRACT_NAME])
   PrintDeployerDetails();
 
   console.log("\nDeploying Implementation contract...")
-  const contractFactoryImplementation = await ethers.getContractFactory(TOKEN_CONTRACT_NAME);
+  const contractFactoryImplementation = await ethers.getContractFactory(CONTRACT_NAME);
   const contract = await contractFactoryImplementation.deploy();
   await contract.waitForDeployment();
-  await PrintContractDetails(contract, TOKEN_CONTRACT_NAME + " implementation ")
+  await PrintContractDetails(contract, CONTRACT_NAME + " implementation ")
+
+  config[CONTRACT_NAME + '_IMPLEMENTATION_ADDRESS'] = await contract.getAddress()
+  WriteConfig(CONFIG_PATH, config)
 }
 
 main()

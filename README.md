@@ -17,7 +17,8 @@ https://github.com/paxosglobal/paxos-token-contract
 To guard against centralized control, the addresses above utilize multisignature contracts ([source](https://github.com/paxosglobal/simple-multisig)). Any change requires the presence of a quorum of signers in the same physical location, ensuring that no individual signer can unilaterally influence a change.
 
 ### ABI and Addresses
-Contract ABIs can be found in the `abis` folder.
+
+The contract abi is in `PaxosToken.abi`, which is the implementation contract abi.
 
 Interaction with token is done at the address of the proxy. Deployed token addresses can be found in
 the [Paxos docs](https://docs.paxos.com/stablecoin).
@@ -95,9 +96,90 @@ Freezing is something that Paxos will not do on its own accord,
 and as such we expect to happen extremely rarely. Checking if an address is frozen is possible
 via `isFrozen(address who)`.
 
+### USDG Rewards System
+
+USDG implements an auto-compounding yield system where registered token holders automatically earn rewards. For complete technical documentation, see [docs/REWARDS_README.md](docs/REWARDS_README.md).
+
+### Contract Architecture
+
+USDG uses a diamond-style facet pattern to organize functionality across multiple contracts while maintaining a single proxy address. This architecture enables gas optimizations, modularity, and upgradability.
+
+#### Main Contract: PaxosTokenClaimableRewards
+The main contract contains:
+- Core ERC20 functions (transfer, approve, balanceOf, etc.)
+- Minting and burning functionality
+- Internal balance and rewards processing
+- Fallback mechanism for delegating to facets
+
+#### Facets
+Additional functionality is organized into specialized facet contracts:
+
+**TokenAdminFacet** - Administrative operations:
+- `reclaimToken()` - Recover accidentally sent tokens
+- `setSupplyControl()` - Configure supply controller
+- `pause()` / `unpause()` - Emergency pause functionality
+- `freeze()` / `unfreeze()` / `wipeFrozenAddress()` - Asset protection
+- `isFrozen()` - Check if address is frozen
+- `paused()` - Check if contract is paused
+
+**ClaimableRewardsFacet** - Rewards operations:
+- Claim functions for payout groups
+- Reward calculation and distribution
+- Payout group management functions
+
+#### Storage Organization
+
+**BaseStorageV3** - Core token storage:
+- ERC20 balances and allowances
+- Account flags (frozen, reward source)
+- Global transfer settings
+- EIP-2612 (permit) and EIP-3009 storage
+- Provides storage getter/setter helpers
+
+**ClaimableRewardsStorageV3** - Rewards-specific storage:
+- Payout group data and mappings
+- Multiplier configurations and balances
+- Admin config settings
+- Registration authorization state
+
+#### Helper Libraries
+
+**ClaimableRewardsBase.sol** - Complex business logic:
+- Reward calculation algorithms
+- Balance update processing
+- Cross-multiplier transfer logic
+
+**SharesLib** - Shares-based reward calculations:
+- Period number calculations
+- ClaimAll detection
+- Share delta calculations
+
+**MultiplierGrowthLib** - Multiplier math:
+- Current multiplier calculation with rate growth
+- Period-aligned compounding
+
+This separation allows the main contract to focus on core ERC20 functionality while delegating specialized operations to facets, reducing contract size and improving gas efficiency.
+
 ### Delegate Transfer 
 
 To facilitate gas-less transactions, we have implemented [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009) and [EIP-2612](https://eips.ethereum.org/EIPS/eip-2612).
+
+#### Comparison: EIP-3009 vs EIP-2612
+
+Both standards enable gasless token operations via signed messages, but they have different use cases and capabilities:
+
+| Feature | EIP-3009 | EIP-2612 |
+|---------|----------|----------|
+| **Primary Use Case** | Direct token transfers | Gasless approvals (allowances) |
+| **Nonce Type** | Random `bytes32` (chosen by user) | Sequential `uint256` (auto-incremented) |
+| **Cancellation** | ✅ `cancelAuthorization()` with signature | ✅ `cancelPermits(count)` increments nonce |
+| **Timing Control** | `validAfter` and `validBefore` windows | Single `deadline` parameter |
+| **Flexibility** | Individual authorization cancellation | Bulk permit cancellation (up to 50) |
+| **State Check** | `authorizationState(address, bytes32)` | `nonces(address)` |
+
+**When to use each:**
+- **EIP-3009**: Direct transfers with fine-grained control and individual cancellation capability
+- **EIP-2612**: Standard gasless approvals compatible with existing `transferFrom` workflows
 
 #### EIP-3009
 The public functions, `transferWithAuthorization` and `transferWithAuthorizationBatch` (for multiple transfers request), allows a spender(delegate) to transfer tokens on behalf of the sender, with condition that a signature, conforming to [EIP-712](https://eips.ethereum.org/EIPS/eip-712), is provided by the respective sender.
@@ -126,6 +208,14 @@ function transferWithAuthorizationBatch(
     bytes32[] memory r,
     bytes32[] memory s
 ) external;
+
+function cancelAuthorization(
+    address authorizer,
+    bytes32 nonce,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+) external;
  ```
 
 #### EIP-2612
@@ -142,6 +232,8 @@ function permit(
     bytes32 s
 ) external;
 
+function cancelPermits(uint256 count) external;
+
 function transferFrom(
     address _from,
     address _to,
@@ -154,6 +246,8 @@ function transferFromBatch(
     uint256[] calldata _value
 ) public returns (bool);
 ```
+
+**Permit Cancellation**: Users can call `cancelPermits(count)` to increment their nonce by `count` (1-50), effectively canceling any pending permits signed with the old nonces. This addresses the need to revoke gasless approvals before they are executed or expire.
 
 ### Upgradeability Proxy
 

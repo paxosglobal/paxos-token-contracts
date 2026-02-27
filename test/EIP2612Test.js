@@ -556,6 +556,22 @@ describe("EIP2612", function () {
       const newNonce = await this.token.nonces(testSigner.address);
       expect(newNonce).to.equal(initialNonce + MAX_NONCE_INCREMENT);
     });
+
+    it("should revert when contract is paused", async function() {
+      const testSigner = this.acc;
+
+      await this.token.pause();
+
+      await expect(
+        this.token.connect(testSigner).cancelPermits(1)
+      ).to.be.revertedWithCustomError(this.token, "ContractPaused");
+
+      await this.token.unpause();
+
+      // Should succeed after unpause
+      await expect(this.token.connect(testSigner).cancelPermits(1))
+        .to.emit(this.token, "PermitInvalidated");
+    });
   });
 
   describe("Permit with bytes signature", function() {

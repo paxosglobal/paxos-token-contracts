@@ -168,7 +168,8 @@ describe('PaxosToken', function () {
 
       it('cannot increaseSupplyToAddress resulting in positive overflow of the totalSupply', async function () {
         // issue a big amount - more than half of what is possible
-        await this.supplyControl.updateLimitConfig(this.owner.address, MaxUint256, MaxUint256)
+        // Set refillPerSecond to 0 to disable rate limiting (SKIP_RATE_LIMIT_CHECK)
+        await this.supplyControl.updateLimitConfig(this.owner.address, MaxUint256, 0)
         let bigAmount = MaxUint256;
         await this.token.increaseSupplyToAddress(bigAmount, this.owner.address);
         let balance = await this.token.balanceOf(this.owner.address);
@@ -294,7 +295,7 @@ describe('PaxosToken', function () {
       });
 
       it('cannot add supply controller if already assigned', async function () {
-        await expect(this.supplyControl.addSupplyController(this.acc.address, MaxUint256, limits.REFILL_PER_SECOND, [this.acc.address], false))
+        await this.supplyControl.addSupplyController(this.acc.address, MaxUint256, limits.REFILL_PER_SECOND, [this.acc.address], false)
         await expect(this.supplyControl.addSupplyController(this.acc.address, MaxUint256, limits.REFILL_PER_SECOND, [this.owner.address], false)).to.be.revertedWithCustomError(this.supplyControl, "AccountAlreadyHasSupplyControllerRole");
       });
 
@@ -418,7 +419,7 @@ describe('PaxosToken', function () {
       });
 
       it('Can removeMintAddressFromWhitelist successfully', async function () {
-        this.token.increaseSupplyToAddress(SMALL_AMOUNT, this.owner.address)
+        await this.token.increaseSupplyToAddress(SMALL_AMOUNT, this.owner.address)
         await expect(this.supplyControl.removeMintAddressFromWhitelist(this.owner.address, this.owner.address))
         .to.emit(this.supplyControl, "MintAddressRemovedFromWhitelist")
         .withArgs(this.owner.address, this.owner.address)

@@ -10,10 +10,12 @@ const PAXOS_TOKEN_V1 = "V1"
 const PAXOS_TOKEN_V2 = "V2"
 
 // Testing an the upgrade is focused on testing the consistency of the memory model. The goal of this test is to
-// read every piece of mutable data (constants are not in storage anyway) that exists in the old version
+// read every piece of mutable data (constants are not in storage anyway) that exists in the V1 version
 // and make sure it doesn't change in the upgrade.
 
 // We are testing from V1 to V2.
+// NOTE: Both V1 and V2 use mapping(address => bool) internal frozen for frozen state.
+// The bool→uint8 migration happens in V3 (ClaimableRewards), not in this V1→V2 upgrade.
 describe('UpgradeToV2', function () {
   let supply;
   let amount;
@@ -67,6 +69,7 @@ describe('UpgradeToV2', function () {
       assert.deepStrictEqual(this.bystanderApproval, await this.token.allowance(holder, bystander));
       assert.deepStrictEqual(this.frozenApproval, await this.token.allowance(holder, frozen)); // 0
       assert.strictEqual(this.bystanderFrozen, await this.token.isFrozen(bystander));
+      assert.strictEqual(this.frozenFrozen, await this.token.isFrozen(frozen));
       assert.deepStrictEqual(this.totalSupply, await this.token.totalSupply());
       assert.strictEqual(this.paused, await this.token.paused());
       assert.notStrictEqual(this.domainSeparator, await this.token.DOMAIN_SEPARATOR()); // Domain separator should be updated
@@ -198,9 +201,12 @@ describe('UpgradeToV2', function () {
   });
 
 
-  it('has the same storage layout', async function () {
+  it('has NOT modified storage layout (V1 and V2 have identical storage structure)', async function () {
+    this.timeout(120000); // 2 minute timeout for storage layout comparison
     const oldFullQualifiedName = "contracts/archive/PaxosTokenV1.sol:PaxosTokenV1";
     const newFullQualifiedName = "contracts/PaxosTokenV2.sol:PaxosTokenV2";
+    // V1 and V2 have identical storage layout (gaps may differ in size)
+    // Storage packing happens in V2→V3 upgrade, not V1→V2
     assert.isFalse(await isStorageLayoutModified(oldFullQualifiedName, newFullQualifiedName))
   });
 });

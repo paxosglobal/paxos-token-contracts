@@ -10,7 +10,7 @@ pragma solidity ^0.8.17;
 abstract contract EIP712Domain {
     // EIP-712 version prefix used in signature verification
     bytes2 public constant EIP712_VERSION_PREFIX = hex"1901";
-
+    
     /**
      * @dev Storage slot for deprecated domain separator (kept for storage compatibility)
      * @dev This storage variable is no longer used as domain separator is always recomputed

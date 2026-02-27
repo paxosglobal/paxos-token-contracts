@@ -9,6 +9,7 @@ scTopics
 allFiredEvents
 artifacts/
 cache/
+edr-cache/
 typechain-types/
 
 .DS_Store
@@ -25,3 +26,13 @@ typechain-types/
 *.test
 
 *.out
+out/
+*_results.txt
+*results.txt
+
+# Backup files
+*.bak
+*.bak*
+
+# Local Claude instructions
+CLAUDE.local.md

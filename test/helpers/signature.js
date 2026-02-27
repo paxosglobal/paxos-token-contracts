@@ -20,15 +20,41 @@ const CANCEL_AUTHORIZATION_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes(
 const MAX_UINT256 = 
   "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
+const EIP712_DOMAIN_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes(
+  "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+));
+
+// Facets hardcode "Global Dollar" as the EIP-712 domain name
+const FACET_EIP712_NAME = "Global Dollar";
+
+async function computeFacetDomainSeparator(token) {
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+  const tokenAddress = await token.getAddress();
+  return ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(
+      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+      [
+        EIP712_DOMAIN_TYPEHASH,
+        ethers.keccak256(ethers.toUtf8Bytes(FACET_EIP712_NAME)),
+        ethers.keccak256(ethers.toUtf8Bytes("1")),
+        chainId,
+        tokenAddress
+      ]
+    )
+  );
+}
+
 module.exports = {
   signPermit,
   signTransferAuthorization,
   signReceiveAuthorization,
   signCancelAuthorization,
+  computeFacetDomainSeparator,
   PERMIT_TYPEHASH,
   TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
   RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
   CANCEL_AUTHORIZATION_TYPEHASH,
+  FACET_EIP712_NAME,
   MAX_UINT256,
 }
 

@@ -1,55 +1,65 @@
 {
   "name": "PaxosToken",
-  "version": "2.0.0",
+  "version": "0.0.1",
   "description": "Paxos issued USD-collateralized ERC20 stablecoin",
+  "main": "index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "generate-abi": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -c .abi > PaxosTokenV2.abi",
-    "generate-bin": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -r .bytecode > PaxosTokenV2.bin",
     "compile": "npx hardhat compile --force",
     "coverage": "npx hardhat coverage",
     "flatten-impl": "npx hardhat flatten contracts/PaxosTokenV2.sol",
-    "solhint": "solhint 'contracts/**/*.sol'",
+    "fuzz": "forge test -vvv",
+    "fuzz:invariants": "FUZZ_SEEDS=10 GAS_REPORTING=false npx hardhat test test/SystemInvariantsFuzzTest.js",
+    "fuzz:extended": "FUZZ_SEEDS=20 GAS_REPORTING=false npx hardhat test test/SystemInvariantsFuzzTest.js",
+    "generate-abi": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -c .abi > PaxosToken.abi",
+    "generate-bin": "cat artifacts/contracts/PaxosTokenV2.sol/PaxosTokenV2.json | jq -r .bytecode > PaxosToken.bin",
     "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/*.sol' 'contracts/lib/*.sol'",
+    "size": "npx hardhat size-contracts",
+    "solhint": "solhint 'contracts/**/*.sol'",
     "test": "npx hardhat test",
-    "size": "npx hardhat size-contracts"
+    "benchmark": "npx hardhat test benchmarks/GasBenchmarkTest.js benchmarks/ClaimNonceGasBenchmark.js benchmarks/GasProfilerTest.js",
+    "test:all": "npm test && npm run benchmark",
+    "generate-role-change-txes": "npx hardhat run scripts/generateRoleChangeTxes.js",
+    "test:upgrade-smoke": "npx hardhat node --fork $FORK_URL & sleep 10 && npx hardhat run scripts/upgrade-smoke-test.js --network localhost; kill %1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/paxosglobal/paxos-token-contracts.git"
+    "url": "git+https://github.com/paxosglobal/pax-contracts.git"
   },
   "author": "PAXOS",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/paxosglobal/paxos-token-contracts/issues"
+    "url": "https://github.com/paxosglobal/pax-contracts/issues"
   },
-  "homepage": "https://paxos.com/",
+  "homepage": "https://github.com/paxosglobal/pax-contracts#readme",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
     "@nomicfoundation/hardhat-ethers": "^3.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
-    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
-    "@nomicfoundation/hardhat-verify": "^1.1.1",
-    "@nomiclabs/hardhat-etherscan": "^3.1.8",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.3",
+    "@okxweb3/hardhat-explorer-verify": "^1.6.5",
     "@openzeppelin/contracts": "^4.9.3",
+    "@openzeppelin/contracts-v5": "npm:@openzeppelin/contracts@5.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.9.3",
-    "@openzeppelin/hardhat-upgrades": "^2.3.3",
-    "@openzeppelin/upgrades": "^2.8.0",
-    "@typechain/hardhat": "^8.0.3",
+    "@openzeppelin/hardhat-upgrades": "^3.5.0",
+    "@typechain/hardhat": "^9.1.0",
     "@types/mocha": "^9.1.1",
-    "chai": "^4.2.0",
+    "axios": "^1.11.0",
+    "chai": "^4.5.0",
     "dotenv": "^16.4.1",
     "eth-sig-util": "^3.0.0",
-    "hardhat": "^2.19.5",
+    "hardhat": "^2.27.2",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
+    "js-yaml": "^4.1.0",
     "prettier": "^3.2.5",
     "prettier-plugin-solidity": "^1.3.1",
     "solc": "0.8.17",
     "solhint": "^4.0.0",
-    "solidity-coverage": "^0.8.6",
+    "solidity-coverage": "^0.8.16",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
@@ -59,7 +69,7 @@
     "elliptic": "^6.0.0",
     "diff": "^3.5.0"
   },
-  "dependencies": {
-    "ganache-cli": "^6.12.2"
+  "overrides": {
+    "fast-xml-parser": "5.3.4"
   }
 }

@@ -118,9 +118,35 @@ async function isStorageLayoutModified(oldFullQualifiedName, newFullQualifiedNam
   return compareData.filter((entry) => "modified" == entry.changed && !entry.entryOld.startsWith("__gap_")).length > 0
 }
 
+/**
+ * Check if V2 storage layout is preserved in V3 upgrade
+ * This only checks V2 storage slots (bytes 0-8063, i.e., slots 0-251)
+ * V3-specific storage (after slot 252) is allowed to change
+ * @param {string} v2FullQualifiedName - e.g., "contracts/PaxosTokenV2.sol:PaxosTokenV2"
+ * @param {string} v3FullQualifiedName - e.g., "contracts/PaxosTokenClaimableRewards.sol:PaxosTokenClaimableRewards"
+ * @returns {boolean} true if V2 storage is preserved, false if modified
+ */
+async function isV2StoragePreserved(v2FullQualifiedName, v3FullQualifiedName) {
+  const compareData = await getComparison(v2FullQualifiedName, v3FullQualifiedName);
+
+  // V2 storage ends at slot 251 (byte 8063)
+  // Slot 252 starts at byte 8064 (252 * 32 = 8064)
+  const V2_STORAGE_END_BYTE = 8063;
+
+  // Check for modifications only in V2 storage range (ignore __gap_)
+  const v2Modifications = compareData.filter((entry) =>
+    entry.changed === "modified" &&
+    !entry.entryOld.startsWith("__gap_") &&
+    entry.bytesStart <= V2_STORAGE_END_BYTE
+  );
+
+  return v2Modifications.length === 0;
+}
+
 module.exports = {
   getComparison,
   isStorageLayoutModified,
+  isV2StoragePreserved,
 };
 
 /* Sample Usage
