@@ -6,6 +6,7 @@ import { SupplyControl } from "./SupplyControl.sol";
 import { EIP2612 } from "./lib/EIP2612.sol";
 import { EIP3009 } from "./lib/EIP3009.sol";
 import { EIP712 } from "./lib/EIP712.sol";
+import { Roles } from "./lib/Roles.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlDefaultAdminRulesUpgradeable.sol";
 
 /**
@@ -49,13 +50,12 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
 
     /**
      * ERRORS
+     * NOTE: AlreadyPaused, AlreadyUnPaused inherited from PaxosBaseAbstract (via EIP2612/EIP3009)
      */
     error OnlySupplyController();
     error InsufficientFunds();
     error AddressNotFrozen();
     error ZeroValue();
-    error AlreadyPaused();
-    error AlreadyUnPaused();
     error InsufficientAllowance();
     error SupplyControllerUnchanged();
     error OnlySupplyControllerOrOwner();
@@ -253,7 +253,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @notice Pause the contract
      * @dev called by the owner to pause, triggers stopped state
      */
-    function pause() public onlyRole(PAUSE_ROLE) {
+    function pause() public onlyRole(Roles.PAUSE_ROLE) {
         if (paused) revert AlreadyPaused();
         paused = true;
         emit Pause();
@@ -263,7 +263,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @notice Unpause the contract
      * @dev called by the owner to unpause, returns to normal state
      */
-    function unpause() public onlyRole(PAUSE_ROLE) {
+    function unpause() public onlyRole(Roles.PAUSE_ROLE) {
         if (!paused) revert AlreadyUnPaused();
         paused = false;
         emit Unpause();
@@ -275,7 +275,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @dev Wipes the balance of a frozen address, and burns the tokens
      * @param addr The new frozen address to wipe
      */
-    function wipeFrozenAddress(address addr) public onlyRole(ASSET_PROTECTION_ROLE) {
+    function wipeFrozenAddress(address addr) public onlyRole(Roles.ASSET_PROTECTION_ROLE) {
         if (!_isAddrFrozen(addr)) revert AddressNotFrozen();
         uint256 balance = balances[addr];
         balances[addr] = 0;
@@ -289,7 +289,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @dev Freezes an address balance from being transferred.
      * @param addr The address to freeze.
      */
-    function freeze(address addr) public onlyRole(ASSET_PROTECTION_ROLE) {
+    function freeze(address addr) public onlyRole(Roles.ASSET_PROTECTION_ROLE) {
         _freeze(addr);
     }
 
@@ -297,7 +297,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @dev Freezes all addresses balance from being transferred.
      * @param addresses The addresses to freeze.
      */
-    function freezeBatch(address[] calldata addresses) public onlyRole(ASSET_PROTECTION_ROLE) {
+    function freezeBatch(address[] calldata addresses) public onlyRole(Roles.ASSET_PROTECTION_ROLE) {
         for (uint256 i = 0; i < addresses.length; ) {
             _freeze(addresses[i]);
             unchecked {
@@ -310,7 +310,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @dev Unfreezes an address balance allowing transfer.
      * @param addr The new address to unfreeze.
      */
-    function unfreeze(address addr) public onlyRole(ASSET_PROTECTION_ROLE) {
+    function unfreeze(address addr) public onlyRole(Roles.ASSET_PROTECTION_ROLE) {
         _unfreeze(addr);
     }
 
@@ -318,7 +318,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @dev Unfreezes all addresses balance from being transferred.
      * @param addresses The addresses to unfreeze.
      */
-    function unfreezeBatch(address[] calldata addresses) public onlyRole(ASSET_PROTECTION_ROLE) {
+    function unfreezeBatch(address[] calldata addresses) public onlyRole(Roles.ASSET_PROTECTION_ROLE) {
         for (uint256 i = 0; i < addresses.length; ) {
             _unfreeze(addresses[i]);
             unchecked {
@@ -463,6 +463,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @param initialOwner Address of the initial owner
      * @param pauser Address of the pauser
      * @param assetProtector Address of the asset protector
+     * @custom:oz-upgrades-validate-as-initializer
      */
     function _initialize(
         uint64 pastVersion,
@@ -482,7 +483,6 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      */
     function _initializeV1(uint64 pastVersion) private {
         if (pastVersion < 1 && !initializedV1) {
-            //Need this second condition since V1 could have used old upgrade pattern
             totalSupply_ = 0;
             initializedV1 = true;
         }
@@ -502,8 +502,8 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
         address assetProtector
     ) private isNonZeroAddress(pauser) isNonZeroAddress(assetProtector) {
         __AccessControlDefaultAdminRules_init(initialDelay, initialOwner);
-        _grantRole(PAUSE_ROLE, pauser);
-        _grantRole(ASSET_PROTECTION_ROLE, assetProtector);
+        _grantRole(Roles.PAUSE_ROLE, pauser);
+        _grantRole(Roles.ASSET_PROTECTION_ROLE, assetProtector);
     }
 
     /**

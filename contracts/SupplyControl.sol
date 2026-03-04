@@ -46,9 +46,10 @@ contract SupplyControl is AccessControlDefaultAdminRulesUpgradeable, UUPSUpgrade
      * @param allowAnyMintAndBurnAddress If true, allows the supply controller to mint to and burn from any address
      */
     struct SupplyController {
-        RateLimit.Storage rateLimitStorage;
-        EnumerableSet.AddressSet mintAddressWhitelist;
-        bool allowAnyMintAndBurnAddress;
+        RateLimit.Storage rateLimitStorage;           // 96 bytes (3 uint256s)
+        EnumerableSet.AddressSet mintAddressWhitelist; // 32 bytes (mapping storage pointer)
+        bool allowAnyMintAndBurnAddress;              // 1 byte
+        // Total: 129 bytes across multiple 32-byte slots
     }
 
     /**
@@ -59,10 +60,11 @@ contract SupplyControl is AccessControlDefaultAdminRulesUpgradeable, UUPSUpgrade
      * @param allowAnyMintAndBurnAddress If true, allows the supply controller to mint to and burn from any address
      */
     struct SupplyControllerInitialization {
-        address newSupplyController;
-        RateLimit.LimitConfig limitConfig;
-        address[] mintAddressWhitelist;
-        bool allowAnyMintAndBurnAddress;
+        address newSupplyController;      // 20 bytes
+        RateLimit.LimitConfig limitConfig; // 64 bytes (2 uint256s)
+        address[] mintAddressWhitelist;   // dynamic array (32 bytes + length + data)
+        bool allowAnyMintAndBurnAddress;  // 1 byte
+        // Total: 117+ bytes across multiple 32-byte slots (dynamic due to array)
     }
 
     /**

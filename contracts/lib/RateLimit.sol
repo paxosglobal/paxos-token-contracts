@@ -15,17 +15,19 @@ library RateLimit {
     uint256 constant SKIP_RATE_LIMIT_CHECK = 0;
     struct Storage {
         // Limit configuration
-        LimitConfig limitConfig;
+        LimitConfig limitConfig;    // 64 bytes (2 uint256s)
         // Remaining amount for the time period
-        uint256 remainingAmount;
+        uint256 remainingAmount;    // 32 bytes
         //Timestamp of last event
-        uint256 lastRefillTime;
+        uint256 lastRefillTime;     // 32 bytes
+        // Total: 128 bytes (4 slots of 32 bytes each)
     }
     struct LimitConfig {
         // Max amount for the rate limit
-        uint256 limitCapacity;
+        uint256 limitCapacity;      // 32 bytes
         // Amount to add to limit each second up to the limitCapacity
-        uint256 refillPerSecond;
+        uint256 refillPerSecond;    // 32 bytes
+        // Total: 64 bytes (2 slots of 32 bytes each)
     }
 
     error RateLimitExceeded();

@@ -111,7 +111,7 @@ abstract contract EIP2612 is PaxosBaseAbstract, EIP712Domain, EIP2612Definitions
      * - New nonce: 8
      * - Canceled permits: those signed with nonces 5, 6, and 7
      */
-    function cancelPermits(uint256 count) external {
+    function cancelPermits(uint256 count) external whenNotPaused {
         if (count == 0 || count > MAX_NONCE_INCREMENT) revert InvalidNonceCount();
 
         _nonces[msg.sender] += count;

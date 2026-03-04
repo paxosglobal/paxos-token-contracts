@@ -1,0 +1,14 @@
+[profile.default]
+src = 'contracts'
+test = 'test/forge'
+script = 'scripts'
+libs = ['node_modules']
+cache_path = 'cache'
+
+[fuzz]
+runs = 10_000
+depth = 10
+
+[profile.ci]
+runs = 10_000
+depth = 100

@@ -1,42 +1,70 @@
 const { ethers, upgrades } = require("hardhat");
 const { MaxUint256 } = require("hardhat").ethers;
 const { getImplementationAddress } = require('@openzeppelin/upgrades-core');
-const { PrintDeployerDetails, ValidateEnvironmentVariables } = require('./utils');
+const { PrintDeployerDetails, ReadConfig, WriteConfig, ValidateEnvironmentVariables } = require('./utils');
 
-const { 
-    SUPPLY_CONTROL_ADMIN_ADDRESS, SUPPLY_CONTROL_MANAGER_ADDRESS, TOKEN_PROXY_ADDRESS,
-    COLD_SUPPLY_CONTROLLER_ADDRESS, COLD_MINT_ADDRESS_LIST, WARM_SUPPLY_CONTROLLER_ADDRESS, 
-    WARM_LIMIT_CAPACITY, WARM_REFILL_PER_SECOND, WARM_MINT_ADDRESS_LIST
- } = process.env;
+const { CONFIG_PATH } = process.env;
+const config = ReadConfig(CONFIG_PATH);
 
-const COLD_LIMIT_CAPACITY = 0;
-const COLD_REFILL_PER_SECOND = 0; //Special value to skip limit checking
 const SUPPLY_CONTROL_CONTRACT_NAME = "SupplyControl";
 
-const scInitializationConfig = 
-  [
-    [COLD_SUPPLY_CONTROLLER_ADDRESS, [COLD_LIMIT_CAPACITY, COLD_REFILL_PER_SECOND], COLD_MINT_ADDRESS_LIST.split(','), false], 
-    [WARM_SUPPLY_CONTROLLER_ADDRESS, [WARM_LIMIT_CAPACITY, WARM_REFILL_PER_SECOND], WARM_MINT_ADDRESS_LIST.split(','), false]
-  ]
-
-const initializerArgs = [
-  SUPPLY_CONTROL_ADMIN_ADDRESS,
-  SUPPLY_CONTROL_MANAGER_ADDRESS,
-  TOKEN_PROXY_ADDRESS,
-  scInitializationConfig
-]
+// ABI for token contract interactions
+const TOKEN_ABI = [
+  "function decimals() view returns (uint8)"
+];
 
 async function main() {
-  ValidateEnvironmentVariables([
-    SUPPLY_CONTROL_ADMIN_ADDRESS, SUPPLY_CONTROL_MANAGER_ADDRESS, TOKEN_PROXY_ADDRESS,
-    COLD_SUPPLY_CONTROLLER_ADDRESS, COLD_MINT_ADDRESS_LIST, WARM_SUPPLY_CONTROLLER_ADDRESS, 
-    WARM_LIMIT_CAPACITY, WARM_REFILL_PER_SECOND, WARM_MINT_ADDRESS_LIST]
-  )
-  PrintDeployerDetails();
 
+  // Use TIMELOCK_ADDRESS as admin if configured, otherwise fall back to SUPPLY_CONTROL_ADMIN_ADDRESS
+  const supplyControlAdmin = config.TIMELOCK_ADDRESS || config.SUPPLY_CONTROL_ADMIN_ADDRESS;
+
+  ValidateEnvironmentVariables([
+    CONFIG_PATH, supplyControlAdmin, config.SUPPLY_CONTROL_MANAGER_ADDRESS, config.TOKEN_PROXY_ADDRESS]
+  )
+  await PrintDeployerDetails();
+
+  // Get token decimals for rate limit calculations
+  const tokenContract = new ethers.Contract(config.TOKEN_PROXY_ADDRESS, TOKEN_ABI, ethers.provider);
+  const decimals = await tokenContract.decimals();
+  console.log(`Token decimals: ${decimals}`);
+
+  const scInitializationConfig = []
+
+  // Iterate through all supply controllers in SUPPLY_CONTROLLERS
+  if (config.SUPPLY_CONTROLLERS) {
+    for (const [controllerName, controller] of Object.entries(config.SUPPLY_CONTROLLERS)) {
+      console.log(`Processing ${controllerName}...`);
+      console.log(controller)
+      // Validate all required fields
+      ValidateEnvironmentVariables([controller.ADDRESS, controller.MINT_ADDRESS_LIST, controller.LIMIT_CAPACITY, controller.REFILL_PER_SECOND])
+
+      // Adjust values based on token decimals
+      const limitCapacity = ethers.parseUnits(controller.LIMIT_CAPACITY.toString(), decimals);
+      const refillPerSecond = ethers.parseUnits(controller.REFILL_PER_SECOND.toString(), decimals);
+
+      scInitializationConfig.push([
+        controller.ADDRESS,
+        [limitCapacity, refillPerSecond],
+        controller.MINT_ADDRESS_LIST.split(',').map(addr => addr.trim()),
+        controller.OVERRIDE_WHITELIST
+      ])
+    }
+  }
+
+  const initializerArgs = [
+    supplyControlAdmin,
+    config.SUPPLY_CONTROL_MANAGER_ADDRESS,
+    config.TOKEN_PROXY_ADDRESS,
+    scInitializationConfig
+  ]
+
+  console.log("\nSupplyControl Admin: %s", supplyControlAdmin);
+
+  console.log("\nDeploying SupplyControl contract...");
   const supplyControlFactory = await ethers.getContractFactory(SUPPLY_CONTROL_CONTRACT_NAME);
   const supplyControl = await upgrades.deployProxy(supplyControlFactory, initializerArgs, {
     initializer: "initialize",
+    kind: 'uups'
   });
   await supplyControl.waitForDeployment();
 
@@ -47,16 +75,32 @@ async function main() {
 
   console.log("Supply controller addresses: %s\n", await supplyControl.getAllSupplyControllerAddresses())
 
-  const coldScConfig = await supplyControl.getSupplyControllerConfig(COLD_SUPPLY_CONTROLLER_ADDRESS)
-  const warmScConfig = await supplyControl.getSupplyControllerConfig(WARM_SUPPLY_CONTROLLER_ADDRESS)
+  // Display config for all supply controllers
+  if (config.SUPPLY_CONTROLLERS) {
+    for (const [controllerName, controller] of Object.entries(config.SUPPLY_CONTROLLERS)) {
+      const scConfig = await supplyControl.getSupplyControllerConfig(controller.ADDRESS)
+      console.log("%s config: \n  limit config: %s \n  mintAddressWhitelist: %s\n  allowAnyMintAndBurnAddress: %s\n",
+        controllerName, scConfig.limitConfig, scConfig.mintAddressWhitelist, scConfig.allowAnyMintAndBurnAddress)
+    }
+  }
 
-  console.log("Cold supply controller config: \n  limit config: %s \n  mintAddressWhitelist: %s\n  allowAnyMintAndBurnAddress: %s\n", coldScConfig.limitConfig, coldScConfig.mintAddressWhitelist, coldScConfig.allowAnyMintAndBurnAddress)
-  console.log("Warm supply controller config: \n  limit config: %s \n  mintAddressWhitelist: %s\n  allowAnyMintAndBurnAddress: %s\n", warmScConfig.limitConfig, warmScConfig.mintAddressWhitelist, warmScConfig.allowAnyMintAndBurnAddress)
+  // Note: setSupplyControl() must be called via Timelock if TIMELOCK_ADDRESS is configured
+  // as the Token owner. This is done separately after deployment.
+
+  config['SUPPLY_CONTROL_PROXY_ADDRESS'] = supplyControl.target;
+  WriteConfig(CONFIG_PATH, config)
+
+  console.log("\n=== Deployment Summary ===");
+  console.log("SupplyControl Proxy: %s", supplyControl.target);
+  console.log("Token Proxy: %s", config.TOKEN_PROXY_ADDRESS);
+  if (config.TIMELOCK_ADDRESS) {
+    console.log("Timelock Controller: %s", config.TIMELOCK_ADDRESS);
+  }
 }
 
 main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-});
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

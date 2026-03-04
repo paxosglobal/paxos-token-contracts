@@ -130,6 +130,7 @@ const roles = {
   SUPPLY_CONTROLLER_MANAGER_ROLE: ethers.keccak256(ethers.toUtf8Bytes("SUPPLY_CONTROLLER_MANAGER_ROLE")),
   SUPPLY_CONTROLLER_ROLE: ethers.keccak256(ethers.toUtf8Bytes("SUPPLY_CONTROLLER_ROLE")),
   TOKEN_CONTRACT_ROLE: ethers.keccak256(ethers.toUtf8Bytes("TOKEN_CONTRACT_ROLE")),
+  REBASE_ADMIN_ROLE: ethers.keccak256(ethers.toUtf8Bytes("REBASE_ADMIN_ROLE")),
   DEFAULT_ADMIN_ROLE: ethers.ZeroHash,
 };
 
@@ -138,9 +139,14 @@ const limits = {
   REFILL_PER_SECOND: 50,
 }
 
+const timelockConfig = {
+  MIN_DELAY: 3600, // 1 hour in seconds
+}
+
 module.exports = {
   ACCOUNTS,
   roles,
-  limits
+  limits,
+  timelockConfig
 }
 

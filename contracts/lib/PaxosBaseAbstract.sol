@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import { Roles } from "./Roles.sol";
+
 /**
  * @title PaxosBaseAbstract contract
  * @dev An abstract contract for Paxos tokens with additional internal functions.
  * @custom:security-contact smart-contract-security@paxos.com
  */
 abstract contract PaxosBaseAbstract {
-    // keccak256("PAUSE_ROLE")
-    bytes32 public constant PAUSE_ROLE = 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d;
-    // keccak256("ASSET_PROTECTION_ROLE")
-    bytes32 public constant ASSET_PROTECTION_ROLE = 0xe3e4f9d7569515307c0cdec302af069a93c9e33f325269bac70e6e22465a9796;
-
     // All base errors.
     error ZeroAddress();
     error ContractPaused();
+    error AlreadyPaused();
+    error AlreadyUnPaused();
     error AddressFrozen();
     error InvalidPermission();
     error AccessControlUnauthorizedAccount(address account, bytes32 role);
@@ -24,7 +23,7 @@ abstract contract PaxosBaseAbstract {
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
      */
-    modifier whenNotPaused() {
+    modifier whenNotPaused() virtual {
         if (_isPaused()) revert ContractPaused();
         _;
     }
@@ -32,7 +31,7 @@ abstract contract PaxosBaseAbstract {
     /**
      * @dev Modifier to check for zero address.
      */
-    modifier isNonZeroAddress(address addr) {
+    modifier isNonZeroAddress(address addr) virtual {
         if (addr == address(0)) revert ZeroAddress();
         _;
     }

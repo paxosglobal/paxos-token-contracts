@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.28;
 
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { PaxosTokenV2 } from "./../PaxosTokenV2.sol";
+import { PaxosTokenClaimableRewards } from "./../PaxosTokenClaimableRewards.sol";
 
 /**
  * @title USDG Smart contract
- * @dev This contract is a {PaxosTokenV2-PaxosTokenV2} ERC20 token.
+ * @dev This contract is a {PaxosTokenClaimableRewards} ERC20 token with auto-compounding yield.
  * @custom:security-contact smart-contract-security@paxos.com
  */
-contract USDG is PaxosTokenV2, UUPSUpgradeable {
+contract USDG is PaxosTokenClaimableRewards, UUPSUpgradeable {
     /**
      * @dev Returns the name of the token.
      */

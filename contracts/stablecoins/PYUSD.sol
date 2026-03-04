@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.28;
 
 
 import { PaxosTokenV2 } from "./../PaxosTokenV2.sol";
 
 /**
  * @title PYUSD Smart contract
- * @dev This contract is a {PaxosTokenV2-PaxosTokenV2} ERC20 token.
+ * @dev This contract is a {PaxosTokenV2} ERC20 token.
  * @custom:security-contact smart-contract-security@paxos.com
  */
 contract PYUSD is PaxosTokenV2 {
