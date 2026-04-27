@@ -1,8 +1,22 @@
 # PAXOS TOKEN
 
-Paxos-issued USD-collateralized ERC20 stablecoin public smart contract repository.
+Paxos-issued ERC20 token public smart contract repository. This repo covers Paxos-issued USD-backed stablecoins (USDP, USDG, PYUSD) and Paxos Gold (PAXG).
 
 https://github.com/paxosglobal/paxos-token-contract
+
+## Audits
+
+| Audit | Report |
+| ----- | ------ |
+| Halborn — PaxosTokenV2 | [audits/Paxos Token Contracts Halborn Audit Report.pdf](audits/Paxos%20Token%20Contracts%20Halborn%20Audit%20Report.pdf) |
+| Zellic — USDG Rewards | [audits/Paxos USDG Rewards - Zellic Audit Report.pdf](audits/Paxos%20USDG%20Rewards%20-%20Zellic%20Audit%20Report.pdf) |
+| Zellic — PAXG V2 | [audits/PAXG V2 - Zellic Audit Report.pdf](audits/PAXG%20V2%20-%20Zellic%20Audit%20Report.pdf) |
+
+## PAXG (Paxos Gold)
+
+PAXG V2 contracts live in this repository at `contracts/stablecoins/PAXG.sol`. V2 upgrades PAXG to the shared `PaxosTokenV2` implementation used by the other Paxos tokens, enabling EIP-2612 permits, EIP-3009 transferWithAuthorization, and the diamond-style facet architecture described below.
+
+The V1 implementation and historical audit reports remain in the legacy [paxos-gold-contract](https://github.com/paxosglobal/paxos-gold-contract) repository, which references this repo as a submodule. See [docs/PAXG_V2_UPGRADE.md](docs/PAXG_V2_UPGRADE.md) for the upgrade guide.
 
 ### Roles
 

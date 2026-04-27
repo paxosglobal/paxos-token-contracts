@@ -30,9 +30,24 @@ function WriteConfig(path, config) {
   fs.writeFileSync(path, file)
 }
 
+async function getImplementationAddressWithRetry(provider, address, retries = 5, delayMs = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await getImplementationAddress(provider, address);
+    } catch (e) {
+      if (i < retries - 1) {
+        console.log(`Waiting for implementation address to be readable (attempt ${i + 1}/${retries})...`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw e;
+      }
+    }
+  }
+}
+
 async function PrintProxyAndImplementation(contract, contractName) {
   console.log("%s proxy address: %s", contractName, await contract.getAddress());
-  console.log('%s implementation address: %s', contractName, await getImplementationAddress(ethers.provider, contract.target))
+  console.log('%s implementation address: %s', contractName, await getImplementationAddressWithRetry(ethers.provider, contract.target))
   console.log("%s contract deploy tx: %s", contractName, contract.deploymentTransaction().hash)
 }
 
@@ -79,4 +94,5 @@ module.exports = {
   WriteConfig,
   ValidateEnvironmentVariables,
   getNonceForNetwork,
+  getImplementationAddressWithRetry,
 }

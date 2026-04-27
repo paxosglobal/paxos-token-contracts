@@ -37,6 +37,7 @@ const {
     SMART_CONTRACT_LIST_PATH = './smart_contract_list.yaml',
     WALLET_CONFIG_PATH = './network_evm_wallets.yaml',
     SKIP_FUNCTIONALITY_TESTS,
+    USDG_UPGRADE_METHOD = 'batchSetFacet',  // 'batchSetFacet' (default) or 'initializeV3'
 } = process.env;
 
 async function getCurrentImplementation(tokenAddress, proxyType) {
@@ -128,6 +129,16 @@ function encodeInitializeV3(implContract, facets, adminAddress) {
     ]);
 }
 
+/**
+ * Encode batchSetFacet calldata for upgrading already-initialized USDG.
+ * @param {Object} implContract - The new implementation contract (for ABI encoding)
+ * @param {Array} facetCuts - Array of FacetCut structs from deployAllFacets()
+ * @returns {string} Encoded batchSetFacet calldata
+ */
+function encodeBatchSetFacet(implContract, facetCuts) {
+    return implContract.interface.encodeFunctionData('batchSetFacet', [facetCuts]);
+}
+
 async function testTokenUpgrade(tokenConfig, knownAddresses, newImplementation) {
     console.log(`\n${"=".repeat(60)}`);
     console.log(`Testing ${tokenConfig.name} (${tokenConfig.symbol}) upgrade`);
@@ -188,14 +199,20 @@ async function testTokenUpgrade(tokenConfig, knownAddresses, newImplementation) 
             newImpl = await implContract.getAddress();
             console.log(`Deployed new test implementation at: ${newImpl}`);
 
-            // For USDG, deploy facets and prepare atomic initializeV3 calldata
+            // For USDG, deploy facets and prepare calldata based on upgrade method
             if (usesDiamondPattern) {
                 const facetData = await deployAllFacets();
-                const initData = encodeInitializeV3(implContract, facetData, proxyAdmin);
+                let initData;
+                if (USDG_UPGRADE_METHOD === 'initializeV3') {
+                    initData = encodeInitializeV3(implContract, facetData, proxyAdmin);
+                    console.log("Prepared atomic initializeV3 calldata for upgradeToAndCall");
+                } else {
+                    initData = encodeBatchSetFacet(implContract, facetData.facetCuts);
+                    console.log("Prepared batchSetFacet calldata for upgradeToAndCall");
+                }
                 // Store for use during upgrade
                 tokenConfig._initData = initData;
                 tokenConfig._facets = facetData.facetCuts; // Used as boolean flag for facet verification
-                console.log("Prepared atomic initializeV3 calldata for upgradeToAndCall");
             }
         } else if (tokenConfig.symbol === "USDG") {
             // When implementation is provided externally, CALL_DATA must also be provided
@@ -224,7 +241,9 @@ async function testTokenUpgrade(tokenConfig, knownAddresses, newImplementation) 
         console.log(`\nExecuting upgrade to: ${newImpl}`);
         let upgradeTx;
         if (tokenConfig.proxyType === "AdminUpgradeabilityProxy") {
-            upgradeTx = await executeProxyUpgrade(tokenConfig.address, proxyAdmin, newImpl);
+            // Use upgradeToAndCall when UPGRADE_CALLDATA is provided (e.g. PAXG V1→V2 migration).
+            const initData = process.env.UPGRADE_CALLDATA || '0x';
+            upgradeTx = await executeProxyUpgrade(tokenConfig.address, proxyAdmin, newImpl, initData);
         } else if (tokenConfig.proxyType === "UUPS") {
             // For USDG with diamond pattern, use upgradeToAndCall with initializeV3
             const initData = tokenConfig._initData || '0x';
@@ -334,8 +353,8 @@ async function testTokenUpgrade(tokenConfig, knownAddresses, newImplementation) 
         if (SKIP_FUNCTIONALITY_TESTS !== 'true') {
             console.log("\n=== Testing Token Functionality ===");
             const functionalityResults = await testTokenFunctionality(
-                token, 
-                knownAddresses.minter, 
+                token,
+                knownAddresses.minter,
                 knownAddresses.pauser
             );
             results.functionalityTests = functionalityResults;

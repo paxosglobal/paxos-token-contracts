@@ -1,7 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 const { MaxUint256 } = require("hardhat").ethers;
-const { getImplementationAddress } = require('@openzeppelin/upgrades-core');
-const { PrintDeployerDetails, ReadConfig, WriteConfig, ValidateEnvironmentVariables } = require('./utils');
+const { PrintDeployerDetails, ReadConfig, WriteConfig, ValidateEnvironmentVariables, getImplementationAddressWithRetry } = require('./utils');
 
 const { CONFIG_PATH } = process.env;
 const config = ReadConfig(CONFIG_PATH);
@@ -71,7 +70,7 @@ async function main() {
   console.log("%s contract deploy tx: %s", SUPPLY_CONTROL_CONTRACT_NAME, supplyControl.deploymentTransaction().hash)
 
   console.log('%s contract proxy address: %s (add this value to .env)', SUPPLY_CONTROL_CONTRACT_NAME, supplyControl.target);
-  console.log('%s implementation address: %s\n', SUPPLY_CONTROL_CONTRACT_NAME, await getImplementationAddress(ethers.provider, supplyControl.target))
+  console.log('%s implementation address: %s\n', SUPPLY_CONTROL_CONTRACT_NAME, await getImplementationAddressWithRetry(ethers.provider, supplyControl.target))
 
   console.log("Supply controller addresses: %s\n", await supplyControl.getAllSupplyControllerAddresses())
 

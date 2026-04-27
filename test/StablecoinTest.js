@@ -1,4 +1,5 @@
 const { deployStableCoinFixturePYUSD, deployStableCoinFixtureUSDP, deployStableCoinFixtureUSDG } = require('./helpers/fixtures');
+const { deployPAXGFixtureV2 } = require('./helpers/paxgFixtures');
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { assert, expect } = require('chai');
 const { ZeroAddress } = require("hardhat").ethers;
@@ -28,6 +29,35 @@ describe('Stable coin testing', function () {
       assert.equal(symbol, "USDP");
       const decimals = await token.decimals();
       assert.equal(decimals, 18);
+    });
+  });
+
+  describe('PAXG testing', async function () {
+    it('has correct name, symbol, and decimals', async function () {
+      let { token } = await loadFixture(deployPAXGFixtureV2);
+      assert.equal(await token.name(), "Paxos Gold");
+      assert.equal(await token.symbol(), "PAXG");
+      assert.equal(await token.decimals(), 18);
+    });
+
+    it('frozen override reads/writes slot 7 correctly', async function () {
+      let { token, owner, acc, assetProtectionRole } = await loadFixture(deployPAXGFixtureV2);
+      const addr = acc.address;
+
+      assert.isFalse(await token.isFrozen(addr));
+      await token.connect(assetProtectionRole).freeze(addr);
+      assert.isTrue(await token.isFrozen(addr));
+
+      // Verify data is at slot 7 (not BaseStorage's slot 6)
+      const proxyAddr = await token.getAddress();
+      const frozenSlot7 = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [addr, 7]));
+      const frozenSlot6 = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [addr, 6]));
+      assert.equal(await ethers.provider.getStorage(proxyAddr, frozenSlot7), "0x0000000000000000000000000000000000000000000000000000000000000001");
+      assert.equal(await ethers.provider.getStorage(proxyAddr, frozenSlot6), "0x0000000000000000000000000000000000000000000000000000000000000000");
+
+      await token.connect(assetProtectionRole).unfreeze(addr);
+      assert.isFalse(await token.isFrozen(addr));
+      assert.equal(await ethers.provider.getStorage(proxyAddr, frozenSlot7), "0x0000000000000000000000000000000000000000000000000000000000000000");
     });
   });
 
