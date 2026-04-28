@@ -192,6 +192,16 @@ describe('Frozen Address Edge Cases', function () {
     });
   });
 
+  describe('cancelPermits() with frozen addresses', function() {
+    it('should revert when msg.sender is frozen', async function() {
+      await this.token.connect(this.assetProtectionRole).freeze(this.acc.address);
+
+      await expect(
+        this.token.connect(this.acc).cancelPermits(1)
+      ).to.be.revertedWithCustomError(this.token, 'AddressFrozen');
+    });
+  });
+
   describe('cancelAuthorization() with frozen addresses', function() {
     it('should revert when authorizer is frozen', async function() {
       const { ethers } = require("hardhat");

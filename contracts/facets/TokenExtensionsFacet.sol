@@ -114,6 +114,7 @@ contract TokenExtensionsFacet is ClaimableRewardsBase, EIP2612Definitions, EIP30
      */
     function cancelPermits(uint256 count) external {
         if (globalTransferSettings.paused) revert ContractPaused();
+        if (_isFrozen(msg.sender)) revert AddressFrozen();
         if (count == 0 || count > MAX_NONCE_INCREMENT) revert InvalidNonceCount();
 
         _nonces[msg.sender] += count;

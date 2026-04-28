@@ -572,6 +572,16 @@ describe("EIP2612", function () {
       await expect(this.token.connect(testSigner).cancelPermits(1))
         .to.emit(this.token, "PermitInvalidated");
     });
+
+    it("should revert when caller is frozen", async function() {
+      const testSigner = this.acc;
+
+      await this.token.connect(this.assetProtectionRole).freeze(testSigner.address);
+
+      await expect(
+        this.token.connect(testSigner).cancelPermits(1)
+      ).to.be.revertedWithCustomError(this.token, "AddressFrozen");
+    });
   });
 
   describe("Permit with bytes signature", function() {

@@ -11,6 +11,11 @@ const { ethers } = require("hardhat");
 const IMPERSONATION_FUNDING = "0x56BC75E2D63100000"; // 100 ETH for gas when impersonating accounts
 const TEST_ALLOWANCE_AMOUNT = 100n; // Standard allowance amount for testing approve/transferFrom
 
+// EIP-3009 typehash
+const TRANSFER_WITH_AUTHORIZATION_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes(
+    "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+));
+
 // Get contract with UUPS upgrade interface
 const upgradeAbi = [
     "function upgradeTo(address newImplementation) external",
@@ -722,6 +727,125 @@ async function setupTestTokens(token, minterAddress, signers) {
 }
 
 /**
+ * Test EIP-3009 transferWithAuthorization after upgrade.
+ *
+ * Fetches the DOMAIN_SEPARATOR from the proxy, builds an EIP-712 signature
+ * against it, and executes transferWithAuthorization. This catches mismatches
+ * between the proxy's name() and the facet's internal name() used during
+ * signature verification.
+ *
+ * @param {Contract} token - Token contract instance
+ * @param {string} minterAddress - Address with minting rights
+ * @returns {Object} Test result with state verification
+ */
+async function testTransferWithAuthorization(token, minterAddress) {
+    const result = {
+        passed: false,
+        balanceChecks: [],
+        errors: []
+    };
+
+    try {
+        // Create a wallet with a known private key for signing
+        const signer = new ethers.Wallet(
+            "0x6bb6d96116b85e7837bf5ee0072010ae6f9d21c32d125b96ede1bd85cb263fb7",
+            ethers.provider
+        );
+        const [submitter] = await ethers.getSigners();
+        const recipientAddress = submitter.address;
+
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [minterAddress],
+        });
+        await hre.network.provider.send("hardhat_setBalance", [
+            minterAddress, IMPERSONATION_FUNDING
+        ]);
+
+        const minterSigner = await ethers.getSigner(minterAddress);
+        const mintAmount = 10000n;
+        // Mint to minterAddress first (whitelisted), then transfer to signer
+        // This works around SupplyControl mint whitelist restrictions (e.g., USDG)
+        await token.connect(minterSigner).increaseSupplyToAddress(mintAmount, minterAddress);
+        await token.connect(minterSigner).transfer(signer.address, mintAmount);
+
+        await hre.network.provider.request({
+            method: "hardhat_stopImpersonatingAccount",
+            params: [minterAddress],
+        });
+
+        // Get DOMAIN_SEPARATOR from the proxy
+        const domainSeparator = await token.DOMAIN_SEPARATOR();
+
+        // Build EIP-712 digest using the proxy's domain separator
+        const nonce = ethers.hexlify(ethers.randomBytes(32));
+        const transferAmount = 100n;
+        const validAfter = 0;
+        const validBefore = ethers.MaxUint256;
+
+        const structHash = ethers.keccak256(
+            ethers.AbiCoder.defaultAbiCoder().encode(
+                ["bytes32", "address", "address", "uint256", "uint256", "uint256", "bytes32"],
+                [TRANSFER_WITH_AUTHORIZATION_TYPEHASH, signer.address, recipientAddress, transferAmount, validAfter, validBefore, nonce]
+            )
+        );
+
+        const digest = ethers.keccak256(
+            ethers.concat(["0x1901", domainSeparator, structHash])
+        );
+
+        // Sign the digest
+        const sig = signer.signingKey.sign(digest);
+
+        // Track balances
+        const preSignerBalance = await token.balanceOf(signer.address);
+        const preRecipientBalance = await token.balanceOf(recipientAddress);
+
+        // Execute transferWithAuthorization
+        const transferTx = await token.connect(submitter).transferWithAuthorization(
+            signer.address,
+            recipientAddress,
+            transferAmount,
+            validAfter,
+            validBefore,
+            nonce,
+            sig.v,
+            sig.r,
+            sig.s
+        );
+        await transferTx.wait();
+
+        // Verify balances
+        const postSignerBalance = await token.balanceOf(signer.address);
+        const postRecipientBalance = await token.balanceOf(recipientAddress);
+
+        if (postSignerBalance !== preSignerBalance - transferAmount) {
+            result.errors.push(
+                `Signer balance mismatch: expected ${preSignerBalance - transferAmount}, got ${postSignerBalance}`
+            );
+        } else if (postRecipientBalance !== preRecipientBalance + transferAmount) {
+            result.errors.push(
+                `Recipient balance mismatch: expected ${preRecipientBalance + transferAmount}, got ${postRecipientBalance}`
+            );
+        } else {
+            result.balanceChecks.push({
+                passed: true,
+                details: `transferWithAuthorization of ${transferAmount} tokens verified`
+            });
+        }
+
+        result.passed = result.errors.length === 0;
+        console.log(`    TransferWithAuthorization (EIP-3009): ${result.passed ? '✓' : '✗'}`);
+
+    } catch (e) {
+        result.errors.push(`TransferWithAuthorization failed: ${e.message}`);
+        console.log(`    TransferWithAuthorization (EIP-3009): ✗ - ${e.message}`);
+    }
+
+    return result;
+}
+
+/**
  * Test basic token functionality with balance verification
  * @param {Contract} token - Token contract instance
  * @param {string} minterAddress - Address with minting rights
@@ -736,6 +860,7 @@ async function testTokenFunctionality(token, minterAddress, pauserAddress) {
         mint: false,
         burn: false,
         pause: false,
+        transferWithAuthorization: false,
         stateVerification: {
             balanceChecks: [],
             errors: []
@@ -795,6 +920,14 @@ async function testTokenFunctionality(token, minterAddress, pauserAddress) {
         results.pause = pauseResult.passed;
         results.stateVerification.balanceChecks.push(...pauseResult.balanceChecks);
         results.stateVerification.errors.push(...pauseResult.errors);
+
+        // Test EIP-3009 transferWithAuthorization
+        if (results.mint) {
+            const eip3009Result = await testTransferWithAuthorization(token, minterAddress);
+            results.transferWithAuthorization = eip3009Result.passed;
+            results.stateVerification.balanceChecks.push(...eip3009Result.balanceChecks);
+            results.stateVerification.errors.push(...eip3009Result.errors);
+        }
 
     } catch (error) {
         console.error(`Error testing functionality: ${error.message}`);

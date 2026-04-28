@@ -117,9 +117,20 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
      * @param assetProtector Address of the asset protector
      */
     function initialize(uint48 initialDelay, address initialOwner, address pauser, address assetProtector) public {
+        bool wasInitializedV1 = initializedV1;
         uint64 pastVersion = _getInitializedVersion();
         _initialize(pastVersion, initialDelay, initialOwner, pauser, assetProtector);
+        if (wasInitializedV1 && pastVersion == 0) {
+            _onUpgradeInitialize();
+        }
     }
+
+    /**
+     * @dev Hook called during initialization only on the first upgrade from a
+     * V1 contract (initializedV1 is true and OZ version was 0). Not called on
+     * fresh deploys or subsequent upgrades (V2 → V3, etc.).
+     */
+    function _onUpgradeInitialize() internal virtual {}
 
     /**
      * @notice Returns the total supply of the token.
@@ -413,7 +424,7 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
     /**
      * @dev See {PaxosBaseAbstract-_isAddrFrozen}
      */
-    function _isAddrFrozen(address addr) internal view override returns (bool) {
+    function _isAddrFrozen(address addr) internal view virtual override returns (bool) {
         return frozen[addr];
     }
 
@@ -507,19 +518,23 @@ contract PaxosTokenV2 is BaseStorage, EIP2612, EIP3009, AccessControlDefaultAdmi
     }
 
     /**
-     * @dev Private function to Freezes an address balance from being transferred.
+     * @dev Freezes an address balance from being transferred.
+     * Virtual to allow tokens with different storage layouts (e.g., PAXG)
+     * to override with storage-compatible implementations.
      * @param addr The addresses to freeze.
      */
-    function _freeze(address addr) private {
+    function _freeze(address addr) internal virtual {
         frozen[addr] = true;
         emit FreezeAddress(addr);
     }
 
     /**
-     * @dev Private function to Unfreezes an address balance from being transferred.
+     * @dev Unfreezes an address balance from being transferred.
+     * Virtual to allow tokens with different storage layouts (e.g., PAXG)
+     * to override with storage-compatible implementations.
      * @param addr The addresses to unfreeze.
      */
-    function _unfreeze(address addr) private {
+    function _unfreeze(address addr) internal virtual {
         delete frozen[addr];
         emit UnfreezeAddress(addr);
     }
