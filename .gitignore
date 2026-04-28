@@ -36,3 +36,4 @@ out/
 
 # Local Claude instructions
 CLAUDE.local.md
+yarn.lock

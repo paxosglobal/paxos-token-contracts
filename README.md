@@ -14,9 +14,9 @@ https://github.com/paxosglobal/paxos-token-contract
 
 ## PAXG (Paxos Gold)
 
-PAXG V2 contracts live in this repository at `contracts/stablecoins/PAXG.sol`. V2 upgrades PAXG to the shared `PaxosTokenV2` implementation used by the other Paxos tokens, enabling EIP-2612 permits, EIP-3009 transferWithAuthorization, and the diamond-style facet architecture described below.
+PAXG V2 contracts live in this repository at `contracts/stablecoins/PAXG.sol`. V2 upgrades PAXG to the shared `PaxosTokenV2` implementation used by the other Paxos tokens, enabling EIP-2612 permits and EIP-3009 transferWithAuthorization. The diamond-style facet architecture described below applies to the USDG rewards token, not to PAXG V2.
 
-The V1 implementation and historical audit reports remain in the legacy [paxos-gold-contract](https://github.com/paxosglobal/paxos-gold-contract) repository, which references this repo as a submodule. See [docs/PAXG_V2_UPGRADE.md](docs/PAXG_V2_UPGRADE.md) for the upgrade guide.
+The V1 implementation is archived at `contracts/archive/PAXGImplementation.sol`. Historical audit reports and the canonical V1 source remain in the legacy [paxos-gold-contract](https://github.com/paxosglobal/paxos-gold-contract) repository, which references this repo as a submodule. See [docs/PAXG_V2_UPGRADE.md](docs/PAXG_V2_UPGRADE.md) for the upgrade guide.
 
 ### Roles
 
