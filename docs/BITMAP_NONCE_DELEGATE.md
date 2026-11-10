@@ -6,6 +6,9 @@ paymaster, or authority/relayer economic agreement. One signature authorizes one
 **batch of intents** from one delegated EOA. An **intent** is one call with one stable
 bitmap nonce. There is no additional bundle of independently signed batches.
 
+Zellic audited this contract; see the
+[Zellic audit report](../audits/Bitmap%20Nonce%20Delegate%20-%20Zellic%20Audit%20Report.pdf).
+
 ## Trust model
 
 Signed execution preserves authorization safety without trusting either the relayer
