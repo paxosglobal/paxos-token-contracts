@@ -4,7 +4,7 @@
 and any relayer can submit and pay gas. The implementation has no reimbursement,
 paymaster, or authority/relayer economic agreement. One signature authorizes one ordered
 **batch of intents** from one delegated EOA. An **intent** is one call with one stable
-bitmap nonce. There is no additional bundle of independently signed batches.
+bitmap nonce.
 
 Zellic audited this contract; see the
 [Zellic audit report](../audits/Bitmap%20Nonce%20Delegate%20-%20Zellic%20Audit%20Report.pdf).
@@ -85,7 +85,7 @@ that cached word contains both existing consumed bits and this run's new bits, s
 an already-used or duplicated ID is rejected before any target runs. When the next
 intent uses a different word, the accumulated word is written and the next word is
 loaded. Revisiting a word reloads its committed bits; neither IDs nor calls are sorted.
-A standalone intent uses the existing single-nonce routine. An empty signed batch is rejected.
+A one-intent batch uses the single-nonce routine directly. An empty signed batch is rejected.
 
 No cached bitmap value crosses an external call. Callbacks can consume or cancel
 unrelated IDs in the same word without any later cached write erasing them. All IDs
@@ -191,23 +191,22 @@ per intent.
 
 Batches use one signature to amortize signature bytes, decoding, and verification
 across the work queue. A batch carries one 65-byte signature and performs one signer
-recovery; independent intent signatures would carry and verify one per item. The
-benchmarks in this document do not measure a per-intent-signature alternative.
+recovery; independent intent signatures would carry and verify one per item.
 
-The primary authority/relayer relationship is operational cooperation: the
-authority approves work, and the relayer submits it and pays gas. The signed fields
+Typically the authority approves work, and a cooperating relayer submits it and
+pays gas. The signed fields
 and rollback behavior also preserve authorization safety with a less-trusted
 relayer, subject to the liveness and timing limits in [Trust model](#trust-model).
-Hot signers can sign new batch arrangements as work is ready. That permits
+An authority that can sign on demand can sign new batch arrangements as work is ready. That permits
 inexpensive batch authority without reimbursement, paymasters, or a negotiated
 gas-price deal. The relayer cannot independently select, reorder, or regroup
 already signed intents: a new batch signature is required.
 
-Cold or warm signers can use a one-intent batch through the same signed endpoint.
+An authority that signs infrequently can use a one-intent batch through the same
+signed endpoint.
 A multi-intent strict batch is available when the authority wants ordered, coupled
 execution. Tolerant mode authorizes independent attempts within one signed list;
 it does not make those intents independently signed or independently deliverable.
-There is no additional grouping layer.
 
 ## Wire format and signing
 
@@ -301,7 +300,7 @@ const executionData = coder.encode(
 ```
 
 `hashBatch(metadata, intents)` returns the complete digest, not just the struct hash.
-The unit suite includes an independently computed golden digest for the packed-cap signing schema.
+The unit suite includes an independently computed golden digest for the signing schema.
 
 The self-authorized path uses `MODE_BATCH` and `abi.encode(Call[])`, requires
 `msg.sender == address(this)`, executes atomically, and has no bitmap IDs. Its
@@ -428,7 +427,7 @@ from the bytecode. Apply the memory formula at that ceiling and check every exit
 path. This can overestimate states that cannot occur together; it is not an
 exact reachable maximum.
 
-For a local trace of the failure-buffer regression, without instrumenting the
+For a local trace of the failure-buffer test, without instrumenting the
 contract, run:
 
 ```sh
@@ -611,8 +610,8 @@ without sorting or restricting nonce order.
 
 `[1, 9, 3, 256, 257, 2, 10]` makes three writes: word 0, word 1, then word 0
 again. The storage-trace test verifies that count. Reloading a revisited word
-preserves its committed bits and detects duplicates across runs. The standalone
-path reuses the existing single-nonce routine, preserving its gas cost.
+preserves its committed bits and detects duplicates across runs. A one-intent
+batch skips run tracking and uses the single-nonce routine.
 
 ## Validation and reproduction
 
@@ -654,7 +653,7 @@ BENCHMARK_GAS_RESERVE=42000 node benchmarks/BitmapNonceDelegateNonceGroupingRece
   > /tmp/bitmap-gas-receipts.json
 ```
 
-It requires ethers v6 (this snapshot used 6.17.0) and compiled delegate and
+It requires ethers v6 (measured with 6.17.0) and compiled delegate and
 MockERC20 artifacts. It checks compiler settings and rejects unoptimized coverage
 artifacts. It installs delegation and fixture balances through local Anvil RPC; use
 a disposable node.
