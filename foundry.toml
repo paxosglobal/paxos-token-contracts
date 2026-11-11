@@ -2,8 +2,16 @@
 src = 'contracts'
 test = 'test/forge'
 script = 'scripts'
-libs = ['node_modules']
+libs = ["node_modules", "lib"]
 cache_path = 'cache'
+# Gas-boundary tests measure CALL funding inside one transaction; isolation splits it.
+isolate = false
+additional_compiler_profiles = [
+    { name = "bitmap", evm_version = "cancun", optimizer = true, optimizer_runs = 200, via_ir = false },
+]
+compilation_restrictions = [
+    { paths = "contracts/delegates/BitmapNonceDelegate.sol", version = "=0.8.28", evm_version = "cancun", optimizer_runs = 200, via_ir = false },
+]
 
 [fuzz]
 runs = 10_000
@@ -12,3 +20,12 @@ depth = 10
 [profile.ci]
 runs = 10_000
 depth = 100
+
+# Instrument only delegate sources; archived Solidity pragmas are unsupported by Solar.
+[profile.bitmap_coverage]
+src = 'contracts/delegates'
+solc = '0.8.28'
+evm_version = 'prague'
+optimizer = false
+additional_compiler_profiles = []
+compilation_restrictions = []

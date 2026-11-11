@@ -11,6 +11,7 @@ https://github.com/paxosglobal/paxos-token-contract
 | Halborn — PaxosTokenV2 | [audits/Paxos Token Contracts Halborn Audit Report.pdf](audits/Paxos%20Token%20Contracts%20Halborn%20Audit%20Report.pdf) |
 | Zellic — USDG Rewards | [audits/Paxos USDG Rewards - Zellic Audit Report.pdf](audits/Paxos%20USDG%20Rewards%20-%20Zellic%20Audit%20Report.pdf) |
 | Zellic — PAXG V2 | [audits/PAXG V2 - Zellic Audit Report.pdf](audits/PAXG%20V2%20-%20Zellic%20Audit%20Report.pdf) |
+| Zellic — Bitmap Nonce Delegate | [audits/Bitmap Nonce Delegate - Zellic Audit Report.pdf](audits/Bitmap%20Nonce%20Delegate%20-%20Zellic%20Audit%20Report.pdf) |
 
 ## PAXG (Paxos Gold)
 
@@ -311,3 +312,9 @@ Run unit tests:
 Check test coverage:
 
 `npm run coverage`
+
+## Bitmap Nonce Delegate
+
+See [Bitmap Nonce Delegate](docs/BITMAP_NONCE_DELEGATE.md) for signed batches of
+replay-protected intents, strict/tolerant nonce and retry semantics, the rationale
+for batch-level signatures, and measured gas.
